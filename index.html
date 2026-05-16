@@ -321,24 +321,95 @@
     .dp{fill:none;stroke:var(--gold);stroke-width:.8;opacity:.22;transition:stroke-dashoffset 2.5s var(--easeIO);filter:drop-shadow(0 0 3px rgba(0,245,255,.5))}
 
     /* ══════════════════════════════════════════════════════════ */
-    /* ABOUT */
+    /* PHILOSOPHY */
+    /* ══════════════════════════════════════════════════════════ */
+    #philosophy{
+      padding:9rem 0;text-align:center;position:relative;overflow:hidden;
+      background:var(--dark);
+    }
+    #philosophy::before,#philosophy::after{
+      content:'';position:absolute;left:0;right:0;height:1px;
+      background:linear-gradient(to right,transparent,rgba(0,245,255,.2),transparent);
+    }
+    #philosophy::before{top:0}#philosophy::after{bottom:0}
+    .phil-label{
+      font-size:10px;font-weight:700;letter-spacing:.4em;text-transform:uppercase;
+      color:var(--gold);margin-bottom:2.5rem;opacity:.7;
+    }
+    .phil-title{
+      font-family:var(--fh);font-size:clamp(3rem,8vw,7rem);
+      font-weight:800;line-height:1;letter-spacing:-.03em;
+      margin-bottom:2.5rem;max-width:900px;margin-right:auto;margin-left:auto;
+    }
+    .phil-divider{
+      width:60px;height:1px;background:linear-gradient(to right,var(--gold),var(--mag));
+      margin:0 auto 2.5rem;box-shadow:0 0 10px rgba(0,245,255,.4);
+    }
+    .phil-text{
+      font-size:18px;color:var(--grey-l);line-height:1.9;
+      max-width:640px;margin:0 auto;
+    }
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* ABOUT / ARTISTS */
     /* ══════════════════════════════════════════════════════════ */
     #about{padding:9rem 0;position:relative;overflow:hidden}
-    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center}
-    /* text on right (rtl = first child) */
-    .about-txt h2{
-      font-family:var(--fh);font-size:clamp(2.8rem,5vw,4.2rem);
-      font-weight:800;line-height:1;letter-spacing:-.02em;margin-bottom:1.4rem;
-      text-shadow:0 0 40px rgba(0,245,255,.1);
+    .about-hd{text-align:center;margin-bottom:5rem}
+    .about-hd h2{
+      font-family:var(--fh);font-size:clamp(2.5rem,5vw,4rem);
+      font-weight:800;letter-spacing:-.02em;margin-bottom:.8rem;
     }
-    .about-txt p{color:var(--grey);line-height:1.9;margin-bottom:1.4rem;font-size:15px}
-    .tags-wrap{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:2rem}
+    .about-hd p{font-size:16px;color:var(--grey);max-width:500px;margin:0 auto}
+
+    .artists-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem}
+    .artist-card{
+      position:relative;cursor:none;
+      transition:transform .4s var(--ease);
+    }
+    .artist-card:hover{transform:translateY(-6px)}
+    .artist-frame{
+      position:relative;aspect-ratio:3/4;background:var(--surf);
+      border:1px solid var(--border);overflow:hidden;margin-bottom:1.8rem;
+    }
+    .artist-frame::after{
+      content:'';position:absolute;top:-1px;right:-1px;
+      width:32px;height:32px;
+      border-top:2px solid var(--gold);border-right:2px solid var(--gold);
+    }
+    .artist-frame .corner-bl{
+      position:absolute;bottom:-1px;left:-1px;width:32px;height:32px;
+      border-bottom:2px solid var(--gold);border-left:2px solid var(--gold);
+    }
+    .artist-ph{
+      width:100%;height:100%;
+      background:linear-gradient(160deg,#080810,#0a0a12 60%,#060608);
+      display:flex;align-items:center;justify-content:center;
+      font-family:var(--fh);font-size:.65rem;letter-spacing:.3em;color:var(--gold-d);
+    }
+    .artist-overlay{
+      position:absolute;inset:0;
+      background:linear-gradient(to top,rgba(0,0,10,.9) 0%,transparent 50%);
+    }
+    .artist-name{
+      font-family:var(--fh);font-size:2rem;font-weight:800;
+      letter-spacing:-.01em;margin-bottom:.3rem;
+      text-shadow:0 0 20px rgba(0,245,255,.15);
+    }
+    .artist-role{
+      font-size:11px;font-weight:700;letter-spacing:.2em;
+      text-transform:uppercase;color:var(--gold);margin-bottom:1rem;
+      text-shadow:0 0 8px rgba(0,245,255,.5);
+    }
+    .artist-bio{font-size:14px;color:var(--grey-l);line-height:1.85;margin-bottom:1.2rem}
+    .artist-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem}
     .sp-tag{
       font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-      padding:.4rem .9rem;border:1px solid var(--border);color:var(--gold);
+      padding:.35rem .8rem;border:1px solid var(--border);color:var(--gold);
       border-radius:2px;transition:all .25s;cursor:none;
     }
-    .sp-tag:hover{background:var(--gold);color:var(--black);border-color:var(--gold)}
+    .sp-tag:hover{background:var(--gold);color:#000;border-color:var(--gold)}
+
+    /* stats (keep for services section) */
     .stats{display:flex;gap:2.5rem;padding-top:2rem;border-top:1px solid var(--borderD);margin-bottom:2.5rem}
     .stat strong{
       display:block;font-family:var(--fh);font-size:2.6rem;
@@ -347,8 +418,6 @@
     }
     .stat span{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey)}
 
-    /* visual */
-    .about-vis{position:relative}
     .a-frame{
       position:relative;aspect-ratio:3/4;background:var(--surf);
       border:1px solid var(--border);overflow:hidden;
@@ -359,7 +428,7 @@
       font-family:var(--fh);font-size:.7rem;letter-spacing:.3em;
       color:var(--gold-d);z-index:1;
     }
-    .a-ph{width:100%;height:100%;background:linear-gradient(160deg,#100f08,#0a0a0a 60%,#110e00)}
+    .a-ph{width:100%;height:100%;background:linear-gradient(160deg,#080810,#0a0a12,#060608)}
     .a-frame::after{
       content:'';position:absolute;top:-1px;right:-1px;
       width:38px;height:38px;
@@ -653,8 +722,7 @@
       .h-tag{margin:0 auto 2.5rem}
       .h-btns{justify-content:center}
       .machine-wrap{order:-1}
-      .about-grid{grid-template-columns:1fr;gap:4rem}
-      .about-vis{max-width:380px;margin:0 auto}
+      .artists-grid{grid-template-columns:1fr;max-width:480px;margin:0 auto}
       .srv-grid{grid-template-columns:repeat(2,1fr)}
       .srv-grid .srv:last-child{grid-column:span 2}
       .proc-steps{grid-template-columns:repeat(2,1fr);gap:3rem}
@@ -732,16 +800,16 @@
   <div class="h-content">
     <!-- Text (right side in RTL) -->
     <div class="h-text">
-      <p class="h-eyebrow">הרצליה, ישראל &nbsp;·&nbsp; מאז 2018</p>
+      <p class="h-eyebrow">סוקולוב 58, הרצליה &nbsp;·&nbsp; TATTOOS &amp; PIERCINGS</p>
       <h1 class="h-title">
         <span class="glitch" data-text="VAIN">VAIN</span><br>
         <span class="stroke">ART</span>
       </h1>
       <p class="h-sub">קעקועים <span>&amp;</span> פירסינג</p>
-      <p class="h-tag">אמנות חקוקה בעור.<br>כל סימן מספר סיפור שנמשך לנצח.</p>
+      <p class="h-tag">ריאליזם ברמה בינלאומית.<br>כי הגוף שלכם ראוי לטוב ביותר.</p>
       <div class="h-btns">
         <a href="#booking" class="btn btn-gold">קבע תור</a>
-        <a href="#gallery" class="btn btn-out">הגלריה</a>
+        <a href="#about" class="btn btn-out">האמנים</a>
       </div>
     </div>
 
@@ -843,55 +911,81 @@
   </div>
 </div>
 
-<!-- ── ABOUT ──────────────────────────────────────────────────────── -->
+<!-- ── PHILOSOPHY ─────────────────────────────────────────────────── -->
+<section id="philosophy" aria-labelledby="phil-h">
+  <div class="container">
+    <p class="phil-label rv">PHILOSOPHY</p>
+    <h2 id="phil-h" class="phil-title rv d1">כל קעקוע הוא<br>יצירת אמנות</h2>
+    <div class="phil-divider rv d2" aria-hidden="true"></div>
+    <p class="phil-text rv d3">ריאליזם ברמה בינלאומית, טכניקות מתקדמות, וסטנדרטי היגיינה מחמירים — כי הגוף שלכם ראוי לטוב ביותר</p>
+  </div>
+</section>
+
+<!-- ── ABOUT / ARTISTS ────────────────────────────────────────────── -->
 <section id="about" aria-labelledby="about-h">
   <div class="container">
-    <div class="about-grid">
 
-      <!-- Text (RTL: first = right) -->
-      <div class="about-txt">
-        <p class="tag rv">האמן</p>
-        <h2 id="about-h" class="rv d1">
-          איל<br><span class="gold">ויין.</span>
-        </h2>
-        <div class="tags-wrap rv d2" role="list" aria-label="התמחויות">
-          <span class="sp-tag" role="listitem">שחור ואפור</span>
-          <span class="sp-tag" role="listitem">ריאליזם צבעוני</span>
-          <span class="sp-tag" role="listitem">מיקרו ריאליזם</span>
-          <span class="sp-tag" role="listitem">מינימליזם</span>
-          <span class="sp-tag" role="listitem">פורטרטים</span>
-          <span class="sp-tag" role="listitem">ליין דק</span>
-        </div>
-        <p class="rv d2">עם למעלה מ-6 שנות מומחיות, איל ויין בנה לעצמו שם כאחד מאמני הקעקועים הבולטים בישראל. ממוקם בסטודיו VAIN בהרצליה, כל יצירה נוצרת מאפס — עם דיוק כירורגי וכבוד עמוק לאמנות.</p>
-        <p class="rv d3">בין אם מדובר בפורטרט היפר-ריאליסטי, בקומפוזיציה עדינה של ליין דק, או בעבודת שחור-אפור נועזת — איל מביא תשומת לב אובססיבית לפרטים ועין אמנותית ייחודית לכל סשן.</p>
-        <div class="stats rv d3" role="list">
-          <div class="stat" role="listitem">
-            <strong class="count-up" data-target="500">0</strong><span>עבודות</span>
-          </div>
-          <div class="stat" role="listitem">
-            <strong class="count-up" data-target="6">0</strong><span>שנות ניסיון</span>
-          </div>
-          <div class="stat" role="listitem">
-            <strong class="count-up" data-target="100">0</strong><span>% מותאם אישית</span>
-          </div>
-        </div>
-        <div class="rv d4">
-          <a href="#booking" class="btn btn-gold">התחל את המסע</a>
-        </div>
-      </div>
+    <div class="about-hd">
+      <p class="tag rv" style="justify-content:center">הכירו את האמנים</p>
+      <h2 id="about-h" class="rv d1">כל אמן עם עולם משלו</h2>
+      <p class="rv d2">בחרו את הסגנון שמדבר אליכם</p>
+    </div>
 
-      <!-- Visual (RTL: second = left) -->
-      <div class="about-vis rv">
-        <div class="a-frame" role="img" aria-label="תמונת האמן איל ויין">
-          <div class="a-ph"></div>
+    <div class="artists-grid">
+
+      <!-- איל -->
+      <div class="artist-card rv">
+        <div class="artist-frame" role="img" aria-label="איל — אמן קעקועים">
+          <div class="artist-ph">תמונת איל</div>
+          <div class="artist-overlay" aria-hidden="true"></div>
           <div class="corner-bl" aria-hidden="true"></div>
         </div>
-        <div class="badge" aria-label="6 שנות ניסיון">
-          <strong>6+</strong><span>שנות ניסיון</span>
+        <h3 class="artist-name">איל</h3>
+        <p class="artist-role">ריאליזם | פרויקטים גדולים</p>
+        <p class="artist-bio">רוח של VAIN ותשוקתו לריאליזם עומדת בפני עצמה. מוביל פרויקטים גדולים ומורכבים תוך שמירה על פרטים מדהימים בכל יצירה — מפורטרטים עד שרוולים שלמים.</p>
+        <div class="artist-tags">
+          <span class="sp-tag">ריאליזם</span>
+          <span class="sp-tag">שחור ואפור</span>
+          <span class="sp-tag">פרויקטים גדולים</span>
+          <span class="sp-tag">פורטרטים</span>
         </div>
+        <a href="#booking" class="btn btn-out" style="font-size:11px;padding:.7rem 1.4rem">← לפורטפוליו</a>
+      </div>
+
+      <!-- שירה -->
+      <div class="artist-card rv d2">
+        <div class="artist-frame" role="img" aria-label="שירה — פירסרית מקצועית">
+          <div class="artist-ph">תמונת שירה</div>
+          <div class="artist-overlay" aria-hidden="true"></div>
+          <div class="corner-bl" aria-hidden="true"></div>
+        </div>
+        <h3 class="artist-name">שירה</h3>
+        <p class="artist-role">פירסינג מקצועי</p>
+        <p class="artist-bio">בעלת הסטודיו ופירסרית מהמובילות בתחום. יד רגישה, שירה ואישית — לקוחות יוצאים עם חיוך ולעיתים גם עם חיבה. מתמחה בפירסינג אוזן, ספטום ועיצוב תכשיטים ייחודיים.</p>
+        <div class="artist-tags">
+          <span class="sp-tag">פירסינג אוזן</span>
+          <span class="sp-tag">ספטום</span>
+          <span class="sp-tag">תכשיטי טיטניום</span>
+          <span class="sp-tag">עיצוב אישי</span>
+        </div>
+        <a href="#booking" class="btn btn-out" style="font-size:11px;padding:.7rem 1.4rem">← לפורטפוליו</a>
       </div>
 
     </div>
+
+    <!-- Stats -->
+    <div class="stats rv" style="justify-content:center;margin-top:4rem;border-top:1px solid var(--borderD);padding-top:3rem" role="list">
+      <div class="stat" role="listitem" style="text-align:center">
+        <strong class="count-up" data-target="500">0</strong><span>עבודות</span>
+      </div>
+      <div class="stat" role="listitem" style="text-align:center">
+        <strong class="count-up" data-target="2">0</strong><span>אמנים</span>
+      </div>
+      <div class="stat" role="listitem" style="text-align:center">
+        <strong class="count-up" data-target="100">0</strong><span>% מותאם אישית</span>
+      </div>
+    </div>
+
   </div>
 </section>
 
