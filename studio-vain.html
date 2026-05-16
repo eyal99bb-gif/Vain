@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Studio Vain — Tattoo & Piercing | Tel Aviv</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --bg: #0a0a0a; }
@@ -51,6 +52,16 @@
       background: radial-gradient(circle, rgba(255,255,255,.03) 0%, transparent 70%);
       top: 10%; right: -10%;
       will-change: transform;
+    }
+    #tattooCanvas {
+      position: absolute;
+      top: 0; right: 0;
+      width: 55%; height: 100%;
+      z-index: 5;
+      pointer-events: none;
+    }
+    @media (max-width: 768px) {
+      #tattooCanvas { width: 100%; opacity: .4; }
     }
     .hero-noise {
       position: absolute; inset: 0; opacity: .04; pointer-events: none;
@@ -206,6 +217,7 @@
     <div class="hero-orb" id="heroOrb"></div>
     <div class="hero-noise"></div>
     <div class="hero-grid"></div>
+    <canvas id="tattooCanvas"></canvas>
     <div class="hero-content" id="heroContent">
       <p class="hero-eyebrow">Tel Aviv · Est. 2016</p>
       <h1 class="hero-title">
@@ -375,6 +387,249 @@
   </footer>
 
   <script>
+    // ── THREE.JS TATTOO MACHINE ──
+    (function() {
+      const canvas = document.getElementById('tattooCanvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const scene = new THREE.Scene();
+
+      function resize() {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+
+      const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+      camera.position.set(0, 0, 7);
+
+      // Materials
+      const chrome = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: .95, roughness: .1 });
+      const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: .9, roughness: .2 });
+      const blackMetal = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: .8, roughness: .3 });
+      const copper = new THREE.MeshStandardMaterial({ color: 0xb87333, metalness: .9, roughness: .15 });
+      const needle = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 1, roughness: .05 });
+
+      // Machine group
+      const machine = new THREE.Group();
+      scene.add(machine);
+
+      function box(w, h, d, mat, x=0, y=0, z=0) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z);
+        m.castShadow = true;
+        return m;
+      }
+      function cyl(rt, rb, h, seg, mat, x=0, y=0, z=0, rx=0) {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+        m.position.set(x, y, z);
+        m.rotation.x = rx;
+        m.castShadow = true;
+        return m;
+      }
+
+      // ── FRAME (main body) ──
+      const frame = new THREE.Group();
+      machine.add(frame);
+
+      // Main rectangular frame body
+      frame.add(box(1.2, 1.6, 0.7, darkMetal, 0, 0.3, 0));
+      // Frame side walls
+      frame.add(box(0.08, 1.6, 0.7, chrome, -0.64, 0.3, 0));
+      frame.add(box(0.08, 1.6, 0.7, chrome,  0.64, 0.3, 0));
+      // Top plate
+      frame.add(box(1.36, 0.08, 0.7, chrome, 0, 1.12, 0));
+      // Bottom plate
+      frame.add(box(1.36, 0.08, 0.7, chrome, 0, -0.52, 0));
+
+      // ── COILS ──
+      const coilGroup = new THREE.Group();
+      coilGroup.position.set(0, 0.3, 0.1);
+      frame.add(coilGroup);
+
+      // Left coil core
+      const lCoil = cyl(.28, .28, .7, 32, blackMetal, -.3, 0, 0);
+      coilGroup.add(lCoil);
+      // Right coil core
+      const rCoil = cyl(.28, .28, .7, 32, blackMetal,  .3, 0, 0);
+      coilGroup.add(rCoil);
+
+      // Coil windings (rings) - left
+      for (let i = -3; i <= 3; i++) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(.28, .045, 8, 24),
+          copper
+        );
+        ring.position.set(-.3, i * 0.092, 0);
+        ring.rotation.x = Math.PI / 2;
+        coilGroup.add(ring);
+      }
+      // Coil windings - right
+      for (let i = -3; i <= 3; i++) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(.28, .045, 8, 24),
+          copper
+        );
+        ring.position.set(.3, i * 0.092, 0);
+        ring.rotation.x = Math.PI / 2;
+        coilGroup.add(ring);
+      }
+      // Coil top/bottom caps
+      coilGroup.add(cyl(.32, .32, .06, 32, chrome, -.3,  .39, 0));
+      coilGroup.add(cyl(.32, .32, .06, 32, chrome, -.3, -.39, 0));
+      coilGroup.add(cyl(.32, .32, .06, 32, chrome,  .3,  .39, 0));
+      coilGroup.add(cyl(.32, .32, .06, 32, chrome,  .3, -.39, 0));
+
+      // ── CONTACT SPRING / ARMATURE BAR ──
+      const armature = box(1.1, 0.06, 0.12, chrome, 0, -0.48, 0.15);
+      frame.add(armature);
+
+      // Spring coil (small)
+      const spring = cyl(.06, .06, .3, 16, chrome, 0, -0.35, 0.15);
+      frame.add(spring);
+
+      // ── GRIP / HANDLE ──
+      const grip = new THREE.Group();
+      grip.position.set(0, -1.15, 0);
+      machine.add(grip);
+
+      // Main grip tube
+      grip.add(cyl(.22, .18, 1.5, 32, blackMetal));
+      // Grip knurling rings
+      for (let i = -5; i <= 5; i++) {
+        const knurl = new THREE.Mesh(
+          new THREE.TorusGeometry(.22, .018, 6, 20),
+          darkMetal
+        );
+        knurl.position.y = i * 0.13;
+        knurl.rotation.x = Math.PI / 2;
+        grip.add(knurl);
+      }
+      // Grip collar (top)
+      grip.add(cyl(.26, .26, .08, 32, chrome, 0,  .8, 0));
+      // Grip tip
+      grip.add(cyl(.18, .10, .2, 32, chrome, 0, -.82, 0));
+
+      // ── NEEDLE TUBE ──
+      const needleGroup = new THREE.Group();
+      needleGroup.position.set(0, -1.98, 0);
+      machine.add(needleGroup);
+
+      needleGroup.add(cyl(.06, .06, .6, 16, chrome));
+      // needle tip
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(.025, .18, 12), needle);
+      tip.position.y = -.42;
+      needleGroup.add(tip);
+
+      // ── BINDING POST ──
+      const post = cyl(.05, .05, .35, 16, chrome, .55, -0.1, 0.35);
+      frame.add(post);
+      const postHead = cyl(.09, .09, .06, 16, chrome, .55, 0.04, 0.35);
+      frame.add(postHead);
+
+      // ── CORD ──
+      const cordCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0.55, -0.1, 0.35),
+        new THREE.Vector3(0.9, -0.5, 0.4),
+        new THREE.Vector3(1.2, -0.9, 0.2),
+        new THREE.Vector3(1.5, -1.6, 0.0),
+      ]);
+      const cordGeo = new THREE.TubeGeometry(cordCurve, 20, 0.025, 8, false);
+      const cord = new THREE.Mesh(cordGeo, blackMetal);
+      frame.add(cord);
+
+      // ── LIGHTS ──
+      const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+      scene.add(ambient);
+
+      const key = new THREE.DirectionalLight(0xffffff, 2.5);
+      key.position.set(3, 5, 4);
+      key.castShadow = true;
+      scene.add(key);
+
+      const fill = new THREE.DirectionalLight(0x8888ff, 0.8);
+      fill.position.set(-4, 2, 2);
+      scene.add(fill);
+
+      const rim = new THREE.DirectionalLight(0xffffff, 1.2);
+      rim.position.set(0, -3, -4);
+      scene.add(rim);
+
+      // Point light for glow
+      const glow = new THREE.PointLight(0xffffff, 0.6, 10);
+      glow.position.set(0, 2, 3);
+      scene.add(glow);
+
+      // Position machine
+      machine.position.set(0.4, 0.2, 0);
+      machine.rotation.y = -0.4;
+      machine.rotation.x = 0.1;
+
+      // ── ANIMATION STATE ──
+      let targetRotY = -0.4;
+      let targetRotX = 0.1;
+      let currentRotY = -0.4;
+      let currentRotX = 0.1;
+      let targetPosY = 0.2;
+      let currentPosY = 0.2;
+
+      // Mouse tracking
+      const heroEl = document.getElementById('hero');
+      heroEl.addEventListener('mousemove', (e) => {
+        const rect = heroEl.getBoundingClientRect();
+        const nx = (e.clientX - rect.left) / rect.width  - 0.5;
+        const ny = (e.clientY - rect.top)  / rect.height - 0.5;
+        targetRotY = -0.4 + nx * 0.8;
+        targetRotX =  0.1 - ny * 0.5;
+      });
+      heroEl.addEventListener('mouseleave', () => {
+        targetRotY = -0.4;
+        targetRotX = 0.1;
+      });
+
+      // Scroll parallax for machine
+      function updateMachineScroll() {
+        const progress = window.scrollY / (heroEl.offsetHeight || 1);
+        targetPosY = 0.2 + progress * 3;
+        targetRotY = -0.4 + progress * 1.5;
+      }
+
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Animate needle oscillation
+      let t = 0;
+      function animate() {
+        requestAnimationFrame(animate);
+        t += 0.04;
+
+        updateMachineScroll();
+
+        // Smooth interpolation
+        currentRotY += (targetRotY - currentRotY) * 0.06;
+        currentRotX += (targetRotX - currentRotX) * 0.06;
+        currentPosY += (targetPosY - currentPosY) * 0.06;
+
+        machine.rotation.y = currentRotY;
+        machine.rotation.x = currentRotX;
+        machine.position.y = currentPosY;
+
+        // Needle vibration (simulate machine running)
+        needleGroup.position.y = -1.98 + Math.sin(t * 8) * 0.012;
+        armature.position.y   = -0.48 + Math.sin(t * 8) * 0.008;
+
+        // Subtle idle float
+        machine.position.y = currentPosY + Math.sin(t * 0.6) * 0.04;
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    })();
+
     // ── NAV scroll state ──
     const nav = document.getElementById('nav');
     window.addEventListener('scroll', () => {
