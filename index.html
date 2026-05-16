@@ -1,1773 +1,1332 @@
 <!DOCTYPE html>
-<html lang="he" dir="ltr">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Vain Tattoo & Piercing Studio – Eyal Vain, Herzliya, Israel. Specializing in black & grey, realism, micro-realism and portrait tattoos." />
-  <title>VAIN — Tattoo & Piercing Studio</title>
-
-  <!-- Fonts -->
+  <meta name="description" content="VAIN — סטודיו לקעקועים ופירסינג. איל ויין, הרצליה, ישראל. מומחה בשחור-אפור, ריאליזם, מיקרו-ריאליזם ופורטרטים." />
+  <title>VAIN — סטודיו לקעקועים ופירסינג</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
-    /* ─── Design Tokens ─────────────────────────────────────────── */
+    /* ── Tokens ───────────────────────────────────────────────── */
     :root {
-      --black:      #000000;
-      --dark:       #0a0a0a;
-      --surface:    #111111;
-      --surface2:   #181818;
-      --gold:       #C9A84C;
-      --gold-light: #E2C47A;
-      --gold-dim:   #8a6e2e;
-      --white:      #FFFFFF;
-      --grey:       #999999;
-      --grey-light: #CCCCCC;
-      --border:     rgba(201,168,76,0.15);
-      --border-dim: rgba(255,255,255,0.06);
-
-      --font-head: 'Syne', sans-serif;
-      --font-body: 'Manrope', sans-serif;
-
-      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --black:    #000000;
+      --dark:     #080808;
+      --surf:     #101010;
+      --surf2:    #161616;
+      --gold:     #C9A84C;
+      --gold-l:   #E2C47A;
+      --gold-d:   #7a6128;
+      --white:    #FFFFFF;
+      --grey:     #888888;
+      --grey-l:   #BBBBBB;
+      --border:   rgba(201,168,76,.14);
+      --borderD:  rgba(255,255,255,.05);
+      --fh:       'Syne', sans-serif;
+      --fb:       'Manrope', sans-serif;
+      --ease:     cubic-bezier(.16,1,.3,1);
+      --easeIO:   cubic-bezier(.65,0,.35,1);
     }
 
-    /* ─── Reset ──────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      background: var(--black);
-      color: var(--white);
-      font-family: var(--font-body);
-      font-size: 16px;
-      line-height: 1.6;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
+    /* ── Reset ────────────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      background:var(--black);color:var(--white);
+      font-family:var(--fb);font-size:16px;line-height:1.6;
+      overflow-x:hidden;-webkit-font-smoothing:antialiased;
+      cursor:none;
     }
-    img { display: block; width: 100%; }
-    a { color: inherit; text-decoration: none; }
+    img{display:block;width:100%}
+    a{color:inherit;text-decoration:none}
+    ::-webkit-scrollbar{width:3px}
+    ::-webkit-scrollbar-track{background:var(--black)}
+    ::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:2px}
 
-    /* ─── Scrollbar ──────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--black); }
-    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+    /* ── Cursor ───────────────────────────────────────────────── */
+    #cursor{
+      position:fixed;top:0;right:0;width:12px;height:12px;
+      background:var(--gold);border-radius:50%;
+      pointer-events:none;z-index:9999;
+      transform:translate(50%,-50%);
+      transition:transform .1s,width .25s var(--ease),height .25s var(--ease),background .25s;
+      mix-blend-mode:difference;
+    }
+    #cursor.big{width:40px;height:40px;background:rgba(201,168,76,.3)}
+    body:hover #cursor{opacity:1}
+    @media(hover:none){#cursor{display:none}body{cursor:auto}}
 
-    /* ─── Utilities ──────────────────────────────────────────────── */
-    .gold { color: var(--gold); }
-    .container {
-      width: 90%;
-      max-width: 1280px;
-      margin: 0 auto;
-    }
-    .section-label {
-      font-family: var(--font-body);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .section-label::before {
-      content: '';
-      display: block;
-      width: 30px;
-      height: 1px;
-      background: var(--gold);
-      flex-shrink: 0;
+    /* ── Noise ────────────────────────────────────────────────── */
+    body::after{
+      content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.35;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
     }
 
-    /* ─── Noise Texture Overlay ──────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 9999;
-      opacity: 0.4;
+    /* ── Scanline ─────────────────────────────────────────────── */
+    body::before{
+      content:'';position:fixed;inset:0;pointer-events:none;z-index:9997;
+      background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
     }
 
-    /* ─── NAV ────────────────────────────────────────────────────── */
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 1.5rem 0;
-      transition: all 0.4s var(--ease-out);
+    /* ── Utilities ────────────────────────────────────────────── */
+    .gold{color:var(--gold)}
+    .container{width:90%;max-width:1280px;margin:0 auto}
+    .tag{
+      font-size:10px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;
+      color:var(--gold);display:inline-flex;align-items:center;gap:.6rem;margin-bottom:1.2rem;
     }
-    nav.scrolled {
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 1rem 0;
-      border-bottom: 1px solid var(--border);
+    .tag::before{content:'';display:block;width:24px;height:1px;background:var(--gold);flex-shrink:0}
+    /* rtl: line appears after text */
+
+    /* ── Reveal ───────────────────────────────────────────────── */
+    .rv{opacity:0;transform:translateY(36px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+    .rv.on{opacity:1;transform:none}
+    .rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}
+    .rv.d3{transition-delay:.3s}.rv.d4{transition-delay:.4s}
+    .rv.d5{transition-delay:.5s}
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .btn{
+      display:inline-flex;align-items:center;gap:.5rem;
+      font-family:var(--fb);font-size:12px;font-weight:700;
+      letter-spacing:.15em;text-transform:uppercase;
+      padding:.95rem 2rem;border-radius:2px;cursor:none;border:none;
+      transition:all .3s var(--ease);
     }
-    .nav-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .btn-gold{background:var(--gold);color:var(--black)}
+    .btn-gold:hover{background:var(--gold-l);transform:translateY(-2px);box-shadow:0 12px 30px rgba(201,168,76,.25)}
+    .btn-out{background:transparent;color:var(--white);border:1px solid rgba(255,255,255,.18)}
+    .btn-out:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-2px)}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* NAV */
+    /* ══════════════════════════════════════════════════════════ */
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:500;
+      padding:1.4rem 0;transition:all .4s var(--ease);
     }
-    .nav-logo {
-      font-family: var(--font-head);
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: 0.15em;
-      color: var(--white);
-      transition: color 0.3s;
+    nav.sc{
+      background:rgba(0,0,0,.88);backdrop-filter:blur(24px);
+      padding:1rem 0;border-bottom:1px solid var(--border);
     }
-    .nav-logo span { color: var(--gold); }
-    .nav-logo:hover { color: var(--gold); }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 2.5rem;
-      list-style: none;
+    .nav-in{display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{
+      font-family:var(--fh);font-size:1.4rem;font-weight:800;
+      letter-spacing:.18em;transition:color .3s;
     }
-    .nav-links a {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--grey-light);
-      transition: color 0.25s;
-      cursor: pointer;
+    .nav-logo span{color:var(--gold)}
+    .nav-logo:hover{color:var(--gold)}
+    .nav-links{display:flex;align-items:center;gap:2.2rem;list-style:none}
+    .nav-links a{
+      font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+      color:var(--grey-l);transition:color .25s;cursor:none;
     }
-    .nav-links a:hover { color: var(--gold); }
-    .nav-cta {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--black) !important;
-      background: var(--gold);
-      padding: 0.6rem 1.4rem;
-      border-radius: 2px;
-      transition: background 0.3s, transform 0.2s !important;
-      cursor: pointer;
+    .nav-links a:hover{color:var(--gold)}
+    .nav-cta{
+      font-size:11px!important;font-weight:700!important;
+      color:var(--black)!important;background:var(--gold);
+      padding:.55rem 1.3rem;border-radius:2px;
+      transition:background .3s,transform .2s!important;
     }
-    .nav-cta:hover {
-      background: var(--gold-light) !important;
-      transform: translateY(-1px);
+    .nav-cta:hover{background:var(--gold-l)!important;transform:translateY(-1px)}
+    .ham{display:none;flex-direction:column;gap:5px;cursor:none;padding:4px}
+    .ham span{display:block;width:22px;height:1.5px;background:var(--white);transition:all .3s}
+    .mnav{
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,.97);z-index:499;
+      flex-direction:column;align-items:center;justify-content:center;gap:2.5rem;
+    }
+    .mnav.open{display:flex}
+    .mnav a{
+      font-family:var(--fh);font-size:2.2rem;font-weight:700;
+      letter-spacing:.08em;text-transform:uppercase;
+      color:var(--white);transition:color .25s;cursor:none;
+    }
+    .mnav a:hover{color:var(--gold)}
+    .mnav-x{
+      position:absolute;top:1.5rem;left:5%;font-size:1.8rem;
+      cursor:none;color:var(--grey);background:none;border:none;color:var(--grey);
     }
 
-    /* Hamburger */
-    .hamburger {
-      display: none;
-      flex-direction: column;
-      gap: 5px;
-      cursor: pointer;
-      padding: 4px;
+    /* ══════════════════════════════════════════════════════════ */
+    /* HERO */
+    /* ══════════════════════════════════════════════════════════ */
+    #hero{
+      position:relative;min-height:100svh;
+      display:flex;align-items:center;justify-content:center;
+      overflow:hidden;
     }
-    .hamburger span {
-      display: block;
-      width: 24px;
-      height: 2px;
-      background: var(--white);
-      transition: all 0.3s;
-    }
-
-    /* ─── Mobile Nav ─────────────────────────────────────────────── */
-    .mobile-nav {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.97);
-      z-index: 99;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2.5rem;
-    }
-    .mobile-nav.open { display: flex; }
-    .mobile-nav a {
-      font-family: var(--font-head);
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--white);
-      transition: color 0.25s;
-    }
-    .mobile-nav a:hover { color: var(--gold); }
-    .mobile-close {
-      position: absolute;
-      top: 1.5rem;
-      right: 5%;
-      font-size: 2rem;
-      cursor: pointer;
-      color: var(--grey);
-    }
-
-    /* ─── HERO ───────────────────────────────────────────────────── */
-    #hero {
-      position: relative;
-      min-height: 100svh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    /* Smoke orb background */
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-    }
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.18;
-      animation: float 8s ease-in-out infinite;
-    }
-    .orb-1 {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, #C9A84C, transparent 70%);
-      top: -15%; left: -10%;
-      animation-delay: 0s;
-    }
-    .orb-2 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, #8a6e2e, transparent 70%);
-      bottom: -10%; right: -5%;
-      animation-delay: -3s;
-    }
-    .orb-3 {
-      width: 350px; height: 350px;
-      background: radial-gradient(circle, #C9A84C, transparent 70%);
-      top: 40%; left: 55%;
-      opacity: 0.08;
-      animation-delay: -6s;
-    }
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(20px, -20px) scale(1.05); }
-    }
-
-    /* Grid lines */
-    .hero-grid {
-      position: absolute;
-      inset: 0;
+    /* grid */
+    .h-grid{
+      position:absolute;inset:0;
       background-image:
-        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
-      background-size: 80px 80px;
-      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+        linear-gradient(rgba(201,168,76,.045) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(201,168,76,.045) 1px,transparent 1px);
+      background-size:70px 70px;
+      mask-image:radial-gradient(ellipse 85% 85% at 50% 50%,black,transparent);
+    }
+    /* orbs */
+    .orb{position:absolute;border-radius:50%;filter:blur(90px);animation:flt 9s ease-in-out infinite}
+    .o1{width:550px;height:550px;background:radial-gradient(circle,#C9A84C,transparent 70%);top:-20%;right:-8%;opacity:.14;animation-delay:0s}
+    .o2{width:450px;height:450px;background:radial-gradient(circle,#7a6128,transparent 70%);bottom:-10%;left:-5%;opacity:.14;animation-delay:-4s}
+    .o3{width:300px;height:300px;background:radial-gradient(circle,#C9A84C,transparent 70%);top:45%;left:40%;opacity:.07;animation-delay:-7s}
+    @keyframes flt{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(16px,-18px) scale(1.06)}}
+
+    .h-content{
+      position:relative;z-index:2;
+      display:grid;grid-template-columns:1fr 1fr;
+      align-items:center;gap:4rem;
+      padding:8rem 0 4rem;width:90%;max-width:1280px;
+    }
+    .h-text{text-align:right}
+    .h-eyebrow{
+      font-size:10px;font-weight:700;letter-spacing:.32em;text-transform:uppercase;
+      color:var(--gold);margin-bottom:1.5rem;
+      opacity:0;animation:fdUp 1s var(--ease) .3s forwards;
+    }
+    /* Glitch title */
+    .h-title{
+      font-family:var(--fh);
+      font-size:clamp(5rem,14vw,13rem);
+      font-weight:800;line-height:.88;letter-spacing:-.03em;
+      margin-bottom:.6rem;
+      opacity:0;animation:fdUp 1s var(--ease) .5s forwards;
+      position:relative;
+    }
+    .h-title .glitch{
+      position:relative;display:inline-block;
+    }
+    .h-title .glitch::before,
+    .h-title .glitch::after{
+      content:attr(data-text);position:absolute;top:0;right:0;
+      font-family:var(--fh);font-weight:800;
+    }
+    .h-title .glitch::before{
+      color:var(--gold);clip-path:polygon(0 0,100% 0,100% 35%,0 35%);
+      transform:translate(-3px,0);animation:glA 4s infinite;
+    }
+    .h-title .glitch::after{
+      color:rgba(201,168,76,.5);clip-path:polygon(0 65%,100% 65%,100% 100%,0 100%);
+      transform:translate(3px,0);animation:glB 4s infinite;
+    }
+    @keyframes glA{
+      0%,90%,100%{transform:translate(0)}
+      92%{transform:translate(-4px,2px);opacity:.8}
+      94%{transform:translate(4px,-2px);opacity:.6}
+      96%{transform:translate(-2px,1px)}
+    }
+    @keyframes glB{
+      0%,90%,100%{transform:translate(0)}
+      92%{transform:translate(4px,-1px);opacity:.5}
+      94%{transform:translate(-3px,2px)}
+      96%{transform:translate(2px,-1px);opacity:.8}
+    }
+    .h-title .stroke{-webkit-text-stroke:2px var(--gold);color:transparent}
+    .h-sub{
+      font-family:var(--fh);font-size:clamp(.9rem,2.2vw,1.7rem);
+      font-weight:400;letter-spacing:.38em;text-transform:uppercase;
+      color:var(--grey);margin-bottom:2.5rem;
+      opacity:0;animation:fdUp 1s var(--ease) .8s forwards;
+    }
+    .h-sub span{color:var(--gold)}
+    .h-tag{
+      font-size:14px;color:var(--grey);line-height:1.9;
+      max-width:380px;margin:0 0 2.5rem auto;
+      opacity:0;animation:fdUp 1s var(--ease) 1s forwards;
+    }
+    .h-btns{
+      display:flex;gap:1rem;justify-content:flex-end;flex-wrap:wrap;
+      opacity:0;animation:fdUp 1s var(--ease) 1.2s forwards;
     }
 
-    .hero-content {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-      padding: 8rem 1rem 4rem;
+    /* Tattoo Machine */
+    .machine-wrap{
+      display:flex;align-items:center;justify-content:center;
+      opacity:0;animation:fdUp 1s var(--ease) .7s forwards;
     }
-    .hero-eyebrow {
-      font-family: var(--font-body);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 2rem;
-      opacity: 0;
-      animation: fadeUp 1s var(--ease-out) 0.3s forwards;
+    .machine-svg{
+      width:min(260px,35vw);
+      filter:drop-shadow(0 0 30px rgba(201,168,76,.18));
+      animation:mFloat 4s ease-in-out infinite;
     }
-    .hero-title {
-      font-family: var(--font-head);
-      font-size: clamp(5rem, 18vw, 16rem);
-      font-weight: 800;
-      line-height: 0.85;
-      letter-spacing: -0.02em;
-      color: var(--white);
-      position: relative;
-      margin-bottom: 0.5rem;
-      opacity: 0;
-      animation: fadeUp 1.2s var(--ease-out) 0.5s forwards;
+    @keyframes mFloat{
+      0%,100%{transform:translateY(0) rotate(-3deg)}
+      50%{transform:translateY(-18px) rotate(-3deg)}
     }
-    .hero-title .stroke {
-      -webkit-text-stroke: 2px var(--gold);
-      color: transparent;
+    .needle-group{animation:buzz .06s ease-in-out infinite alternate;transform-origin:80px 220px}
+    @keyframes buzz{from{transform:translateX(-.7px)}to{transform:translateX(.7px)}}
+    .machine-led{animation:ledP 1.2s ease-in-out infinite}
+    @keyframes ledP{0%,100%{opacity:1;filter:drop-shadow(0 0 4px #C9A84C)}50%{opacity:.2;filter:none}}
+    .needle-glow{animation:ngP .06s ease-in-out infinite alternate}
+    @keyframes ngP{from{opacity:.1}to{opacity:.4}}
+
+    /* Sparks */
+    .sparks{position:absolute;pointer-events:none}
+    .spark{
+      position:absolute;width:2px;height:2px;background:var(--gold);border-radius:50%;
+      animation:spk 1.2s ease-out infinite;
     }
-    .hero-subtitle {
-      font-family: var(--font-head);
-      font-size: clamp(1rem, 3vw, 2.2rem);
-      font-weight: 400;
-      letter-spacing: 0.4em;
-      text-transform: uppercase;
-      color: var(--grey);
-      margin-bottom: 3rem;
-      opacity: 0;
-      animation: fadeUp 1s var(--ease-out) 0.8s forwards;
-    }
-    .hero-subtitle span { color: var(--gold); }
-    .hero-divider {
-      width: 1px;
-      height: 60px;
-      background: linear-gradient(to bottom, var(--gold), transparent);
-      margin: 0 auto 2rem;
-      opacity: 0;
-      animation: fadeUp 1s var(--ease-out) 1s forwards;
-    }
-    .hero-tagline {
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--grey);
-      letter-spacing: 0.05em;
-      max-width: 400px;
-      margin: 0 auto 3rem;
-      line-height: 1.8;
-      opacity: 0;
-      animation: fadeUp 1s var(--ease-out) 1.2s forwards;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      opacity: 0;
-      animation: fadeUp 1s var(--ease-out) 1.4s forwards;
+    .spark:nth-child(1){animation-delay:0s;--dx:8px;--dy:-12px}
+    .spark:nth-child(2){animation-delay:.3s;--dx:-10px;--dy:-8px}
+    .spark:nth-child(3){animation-delay:.6s;--dx:12px;--dy:-6px}
+    .spark:nth-child(4){animation-delay:.9s;--dx:-6px;--dy:-14px}
+    @keyframes spk{
+      0%{transform:translate(0,0);opacity:1;width:2px;height:2px}
+      100%{transform:translate(var(--dx),var(--dy));opacity:0;width:1px;height:1px}
     }
 
     /* Scroll indicator */
-    .scroll-indicator {
-      position: absolute;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      opacity: 0;
-      animation: fadeIn 1s var(--ease-out) 2s forwards;
+    .scroll-ind{
+      position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);
+      display:flex;flex-direction:column;align-items:center;gap:.5rem;
+      opacity:0;animation:fdIn 1s var(--ease) 2s forwards;
     }
-    .scroll-indicator span {
-      font-size: 10px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--grey);
+    .scroll-ind span{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--grey)}
+    .s-line{width:1px;height:44px;background:linear-gradient(to bottom,var(--gold),transparent);animation:sP 2s ease-in-out infinite}
+    @keyframes sP{0%,100%{opacity:1;transform:scaleY(1)}50%{opacity:.25;transform:scaleY(.6)}}
+
+    @keyframes fdUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+    @keyframes fdIn{from{opacity:0}to{opacity:1}}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* MARQUEE */
+    /* ══════════════════════════════════════════════════════════ */
+    .marquee{background:var(--gold);overflow:hidden;padding:.7rem 0}
+    .mq-track{display:flex;animation:mq 22s linear infinite;width:max-content}
+    .mq-item{
+      white-space:nowrap;padding:0 1.8rem;
+      font-family:var(--fh);font-size:11px;font-weight:700;
+      letter-spacing:.2em;text-transform:uppercase;color:var(--black);
     }
-    .scroll-line {
-      width: 1px;
-      height: 40px;
-      background: linear-gradient(to bottom, var(--gold), transparent);
-      animation: scrollPulse 2s ease-in-out infinite;
+    .mq-dot{color:rgba(0,0,0,.3);margin:0 .4rem}
+    @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* SVG DRAW DECO */
+    /* ══════════════════════════════════════════════════════════ */
+    .deco-svg{position:absolute;pointer-events:none;overflow:visible}
+    .dp{fill:none;stroke:var(--gold);stroke-width:.8;opacity:.18;transition:stroke-dashoffset 2.5s var(--easeIO)}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* ABOUT */
+    /* ══════════════════════════════════════════════════════════ */
+    #about{padding:9rem 0;position:relative;overflow:hidden}
+    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center}
+    /* text on right (rtl = first child) */
+    .about-txt h2{
+      font-family:var(--fh);font-size:clamp(2.8rem,5vw,4.2rem);
+      font-weight:800;line-height:1;letter-spacing:-.02em;margin-bottom:1.4rem;
     }
-    @keyframes scrollPulse {
-      0%, 100% { opacity: 1; transform: scaleY(1); }
-      50% { opacity: 0.3; transform: scaleY(0.7); }
+    .about-txt p{color:var(--grey);line-height:1.9;margin-bottom:1.4rem;font-size:15px}
+    .tags-wrap{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:2rem}
+    .sp-tag{
+      font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      padding:.4rem .9rem;border:1px solid var(--border);color:var(--gold);
+      border-radius:2px;transition:all .25s;cursor:none;
+    }
+    .sp-tag:hover{background:var(--gold);color:var(--black);border-color:var(--gold)}
+    .stats{display:flex;gap:2.5rem;padding-top:2rem;border-top:1px solid var(--borderD);margin-bottom:2.5rem}
+    .stat strong{
+      display:block;font-family:var(--fh);font-size:2.6rem;
+      font-weight:800;color:var(--gold);line-height:1;
+    }
+    .stat span{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey)}
+
+    /* visual */
+    .about-vis{position:relative}
+    .a-frame{
+      position:relative;aspect-ratio:3/4;background:var(--surf);
+      border:1px solid var(--border);overflow:hidden;
+    }
+    .a-frame::before{
+      content:'תמונה';position:absolute;top:50%;left:50%;
+      transform:translate(-50%,-50%);
+      font-family:var(--fh);font-size:.7rem;letter-spacing:.3em;
+      color:var(--gold-d);z-index:1;
+    }
+    .a-ph{width:100%;height:100%;background:linear-gradient(160deg,#100f08,#0a0a0a 60%,#110e00)}
+    .a-frame::after{
+      content:'';position:absolute;top:-1px;right:-1px;
+      width:38px;height:38px;
+      border-top:2px solid var(--gold);border-right:2px solid var(--gold);
+    }
+    .corner-bl{
+      position:absolute;bottom:-1px;left:-1px;width:38px;height:38px;
+      border-bottom:2px solid var(--gold);border-left:2px solid var(--gold);
+    }
+    .badge{
+      position:absolute;bottom:-1.5rem;left:-1.5rem;
+      width:108px;height:108px;background:var(--gold);border-radius:50%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      box-shadow:0 0 50px rgba(201,168,76,.28);
+    }
+    .badge strong{font-family:var(--fh);font-size:2rem;font-weight:800;color:var(--black);line-height:1}
+    .badge span{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.6)}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* SERVICES */
+    /* ══════════════════════════════════════════════════════════ */
+    #services{padding:9rem 0;background:var(--dark);position:relative;overflow:hidden}
+    #services::before,#services::after{
+      content:'';position:absolute;left:0;right:0;height:1px;
+      background:linear-gradient(to right,transparent,var(--gold-d),transparent);
+    }
+    #services::before{top:0}#services::after{bottom:0}
+    .sec-hd{text-align:center;margin-bottom:4.5rem}
+    .sec-hd .tag{justify-content:center}
+    .sec-hd h2{font-family:var(--fh);font-size:clamp(2.5rem,5vw,4rem);font-weight:800;letter-spacing:-.02em}
+
+    .srv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:var(--borderD)}
+    .srv{
+      background:var(--dark);padding:3rem 2.5rem;position:relative;overflow:hidden;
+      cursor:none;transition:background .4s var(--ease);
+    }
+    .srv::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(201,168,76,.07),transparent);
+      opacity:0;transition:opacity .4s;
+    }
+    .srv:hover{background:var(--surf)}
+    .srv:hover::before{opacity:1}
+    .srv:hover .srv-n{color:var(--gold)}
+    .srv-n{
+      font-family:var(--fh);font-size:4rem;font-weight:800;
+      color:rgba(255,255,255,.04);line-height:1;margin-bottom:1.4rem;
+      letter-spacing:-.05em;transition:color .4s;
+    }
+    .srv-icon{width:42px;height:42px;margin-bottom:1.4rem;color:var(--gold)}
+    .srv h3{font-family:var(--fh);font-size:1.35rem;font-weight:700;margin-bottom:.9rem;letter-spacing:-.01em}
+    .srv p{font-size:14px;color:var(--grey);line-height:1.85;margin-bottom:1.4rem}
+    .srv-list{list-style:none;display:flex;flex-direction:column;gap:.45rem}
+    .srv-list li{
+      font-size:13px;color:var(--grey-l);
+      display:flex;align-items:center;gap:.5rem;
+    }
+    .srv-list li::before{content:'';display:block;width:14px;height:1px;background:var(--gold);flex-shrink:0}
+    .srv-line{
+      position:absolute;bottom:0;right:0;left:0;height:2px;
+      background:linear-gradient(to left,var(--gold),var(--gold-d));
+      transform:scaleX(0);transform-origin:right;transition:transform .4s var(--ease);
+    }
+    .srv:hover .srv-line{transform:scaleX(1)}
+
+    /* 3D tilt */
+    .srv{transform-style:preserve-3d;perspective:800px}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* GALLERY */
+    /* ══════════════════════════════════════════════════════════ */
+    #gallery{padding:9rem 0;position:relative;overflow:hidden}
+    .gal-hd{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:3rem;flex-wrap:wrap;gap:1.5rem}
+    .gal-hd h2{font-family:var(--fh);font-size:clamp(2.5rem,5vw,4rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+
+    /* Horizontal scroll gallery */
+    .gal-scroll-wrap{position:relative}
+    .gal-scroll{
+      display:flex;gap:12px;overflow-x:auto;
+      padding-bottom:1.5rem;scroll-snap-type:x mandatory;
+      scrollbar-width:thin;scrollbar-color:var(--gold-d) transparent;
+      cursor:grab;
+    }
+    .gal-scroll:active{cursor:grabbing}
+    .gal-scroll::-webkit-scrollbar{height:3px}
+    .gal-scroll::-webkit-scrollbar-track{background:transparent}
+    .gal-scroll::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:2px}
+
+    .gal-item{
+      flex-shrink:0;position:relative;overflow:hidden;
+      background:var(--surf);scroll-snap-align:start;cursor:none;
+    }
+    .gal-item:nth-child(odd){width:280px;height:380px}
+    .gal-item:nth-child(even){width:220px;height:300px;margin-top:40px}
+    .gal-item:nth-child(3n){width:320px;height:420px;margin-top:-20px}
+
+    .gal-ph{
+      width:100%;height:100%;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .gal-item:nth-child(1) .gal-ph{background:linear-gradient(160deg,#1a1208,#0d0d0d 60%,#1a0f00)}
+    .gal-item:nth-child(2) .gal-ph{background:linear-gradient(200deg,#0a0a0a,#1a1208)}
+    .gal-item:nth-child(3) .gal-ph{background:linear-gradient(120deg,#111108,#0a0a0a)}
+    .gal-item:nth-child(4) .gal-ph{background:linear-gradient(170deg,#0f0e08,#1a1400)}
+    .gal-item:nth-child(5) .gal-ph{background:linear-gradient(220deg,#0a0a08,#141208)}
+    .gal-item:nth-child(6) .gal-ph{background:linear-gradient(145deg,#121008,#0a0a0a)}
+    .gal-item:nth-child(7) .gal-ph{background:linear-gradient(190deg,#151208,#0d0b08)}
+    .gal-item:nth-child(8) .gal-ph{background:linear-gradient(130deg,#111108,#0e0e0a)}
+
+    .gal-lbl{
+      position:absolute;bottom:.7rem;right:.7rem;
+      font-size:9px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+      color:rgba(201,168,76,.35);
+    }
+    .gal-ov{
+      position:absolute;inset:0;background:rgba(0,0,0,.65);
+      display:flex;align-items:center;justify-content:center;
+      opacity:0;transition:opacity .3s;
+    }
+    .gal-item:hover .gal-ov{opacity:1}
+    .gal-ov-txt{
+      font-family:var(--fh);font-size:12px;font-weight:700;
+      letter-spacing:.15em;text-transform:uppercase;color:var(--gold);
+      border:1px solid var(--gold);padding:.55rem 1.1rem;
+      transform:translateY(6px);transition:transform .3s var(--ease);
+    }
+    .gal-item:hover .gal-ov-txt{transform:none}
+    .gal-icon{opacity:.06;color:var(--gold);width:40px;height:40px}
+
+    /* drag hint */
+    .drag-hint{
+      display:flex;align-items:center;gap:.6rem;
+      font-size:11px;color:var(--grey);letter-spacing:.1em;margin-top:1.5rem;
+    }
+    .drag-hint svg{width:16px;height:16px;color:var(--gold);animation:dh 1.5s ease-in-out infinite}
+    @keyframes dh{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* PROCESS */
+    /* ══════════════════════════════════════════════════════════ */
+    #process{padding:9rem 0;background:var(--dark);position:relative}
+    #process::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(to right,transparent,var(--gold-d),transparent);
+    }
+    .proc-hd{text-align:center;margin-bottom:5rem}
+    .proc-hd .tag{justify-content:center}
+    .proc-hd h2{font-family:var(--fh);font-size:clamp(2.5rem,5vw,4rem);font-weight:800;letter-spacing:-.02em}
+    .proc-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+    .proc-steps::before{
+      content:'';position:absolute;top:27px;right:12%;left:12%;height:1px;
+      background:linear-gradient(to left,var(--gold),rgba(201,168,76,.2),var(--gold));
+    }
+    .proc-step{text-align:center;padding:0 1.5rem;position:relative;z-index:1}
+    .step-n{
+      width:54px;height:54px;border-radius:50%;border:1px solid var(--gold);
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 1.5rem;font-family:var(--fh);font-size:.9rem;font-weight:700;
+      color:var(--gold);background:var(--dark);
+    }
+    .proc-step h4{font-family:var(--fh);font-size:1.1rem;font-weight:700;margin-bottom:.7rem}
+    .proc-step p{font-size:13px;color:var(--grey);line-height:1.75}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* BOOKING */
+    /* ══════════════════════════════════════════════════════════ */
+    #booking{padding:9rem 0;position:relative;overflow:hidden;text-align:center}
+    .bk-orb{
+      position:absolute;width:800px;height:800px;border-radius:50%;
+      background:radial-gradient(circle,rgba(201,168,76,.07),transparent 70%);
+      top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;
+    }
+    /* rotating ring */
+    .bk-ring{
+      position:absolute;top:50%;left:50%;
+      width:600px;height:600px;border-radius:50%;
+      border:1px solid rgba(201,168,76,.08);
+      transform:translate(-50%,-50%);
+      animation:spin 30s linear infinite;
+    }
+    .bk-ring2{
+      position:absolute;top:50%;left:50%;
+      width:400px;height:400px;border-radius:50%;
+      border:1px dashed rgba(201,168,76,.06);
+      transform:translate(-50%,-50%);
+      animation:spin 20s linear infinite reverse;
+    }
+    @keyframes spin{from{rotate:0deg}to{rotate:360deg}}
+    .bk-content{position:relative;z-index:1;max-width:720px;margin:0 auto}
+    .bk-big{
+      font-family:var(--fh);font-size:clamp(3.5rem,10vw,9rem);
+      font-weight:800;line-height:.9;letter-spacing:-.04em;margin-bottom:2rem;
+    }
+    .bk-big .l1{color:var(--white);display:block}
+    .bk-big .l2{-webkit-text-stroke:2px var(--gold);color:transparent;display:block}
+    .bk-sub{font-size:15px;color:var(--grey);line-height:1.85;margin-bottom:3rem;max-width:500px;margin-right:auto;margin-left:auto}
+    .bk-acts{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+
+    /* ══════════════════════════════════════════════════════════ */
+    /* CONTACT */
+    /* ══════════════════════════════════════════════════════════ */
+    #contact{padding:9rem 0 0;border-top:1px solid var(--borderD)}
+    .ct-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:6rem;margin-bottom:5rem}
+    .ct-l h2{
+      font-family:var(--fh);font-size:clamp(2.5rem,4vw,3.5rem);
+      font-weight:800;line-height:1.1;letter-spacing:-.02em;margin-bottom:1.4rem;
+    }
+    .ct-l p{color:var(--grey);font-size:15px;line-height:1.85;margin-bottom:2.5rem;max-width:440px}
+    .ct-info{display:flex;flex-direction:column;gap:1.4rem}
+    .ct-row{display:flex;gap:1rem;align-items:flex-start}
+    .ct-ico{
+      width:40px;height:40px;border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold);
+    }
+    .ct-ico svg{width:17px;height:17px}
+    .ct-txt strong{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:.2rem}
+    .ct-txt span{font-size:14px;color:var(--white)}
+    .socials{display:flex;gap:.8rem;margin-top:2rem}
+    .soc{
+      width:42px;height:42px;border:1px solid var(--borderD);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--grey);transition:all .25s;cursor:none;
+    }
+    .soc:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.06)}
+    .soc svg{width:17px;height:17px}
+
+    /* Form */
+    .ct-r{display:flex;flex-direction:column;gap:1.3rem}
+    .fg{display:flex;flex-direction:column;gap:.45rem}
+    .fg label{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--grey)}
+    .fg input,.fg textarea,.fg select{
+      background:var(--surf);border:1px solid var(--borderD);
+      color:var(--white);font-family:var(--fb);font-size:14px;
+      padding:.85rem 1rem;border-radius:2px;outline:none;
+      transition:border-color .25s;-webkit-appearance:none;
+    }
+    .fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--gold)}
+    .fg textarea{resize:vertical;min-height:100px}
+    .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .f-submit{width:100%;justify-content:center;font-size:12px;padding:1.05rem;margin-top:.4rem}
+    .f-ok{
+      display:none;margin-top:1rem;padding:1rem;
+      border:1px solid rgba(201,168,76,.3);background:rgba(201,168,76,.06);
+      color:var(--gold);font-size:12px;letter-spacing:.05em;
+      border-radius:2px;text-align:center;
     }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
+    /* Footer */
+    footer{padding:2.5rem 0;border-top:1px solid var(--borderD)}
+    .ft-in{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+    .ft-logo{font-family:var(--fh);font-size:1.2rem;font-weight:800;letter-spacing:.15em}
+    .ft-logo span{color:var(--gold)}
+    .ft-copy{font-size:12px;color:var(--grey)}
+    .ft-r{font-size:11px;color:rgba(255,255,255,.18)}
 
-    /* ─── Buttons ────────────────────────────────────────────────── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-family: var(--font-body);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      padding: 1rem 2.2rem;
-      border-radius: 2px;
-      cursor: pointer;
-      transition: all 0.3s var(--ease-out);
-      border: none;
+    /* ══════════════════════════════════════════════════════════ */
+    /* LIGHTBOX */
+    /* ══════════════════════════════════════════════════════════ */
+    .lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:600;align-items:center;justify-content:center}
+    .lb.open{display:flex}
+    .lb-x{
+      position:absolute;top:1.5rem;left:1.5rem;
+      font-size:2rem;color:var(--grey);cursor:none;
+      background:none;border:none;line-height:1;transition:color .25s;
     }
-    .btn-gold {
-      background: var(--gold);
-      color: var(--black);
+    .lb-x:hover{color:var(--gold)}
+    .lb-body{max-width:640px;width:90%;text-align:center}
+    .lb-ph{
+      width:100%;aspect-ratio:4/5;background:var(--surf);
+      border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--gold-d);font-family:var(--fh);font-size:.75rem;letter-spacing:.3em;
     }
-    .btn-gold:hover {
-      background: var(--gold-light);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(201,168,76,0.3);
-    }
-    .btn-outline {
-      background: transparent;
-      color: var(--white);
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-    .btn-outline:hover {
-      border-color: var(--gold);
-      color: var(--gold);
-      transform: translateY(-2px);
-    }
+    .lb-cap{margin-top:1rem;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--grey)}
 
-    /* ─── Reveal Animation ───────────────────────────────────────── */
-    .reveal {
-      opacity: 0;
-      transform: translateY(40px);
-      transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
-    }
-    .reveal.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.2s; }
-    .reveal-delay-3 { transition-delay: 0.3s; }
-    .reveal-delay-4 { transition-delay: 0.4s; }
-    .reveal-delay-5 { transition-delay: 0.5s; }
-
-    /* ─── MARQUEE STRIP ──────────────────────────────────────────── */
-    .marquee-strip {
-      background: var(--gold);
-      overflow: hidden;
-      padding: 0.75rem 0;
-      position: relative;
-    }
-    .marquee-track {
-      display: flex;
-      gap: 0;
-      animation: marquee 20s linear infinite;
-      width: max-content;
-    }
-    .marquee-item {
-      white-space: nowrap;
-      padding: 0 2rem;
-      font-family: var(--font-head);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--black);
-    }
-    .marquee-dot {
-      color: rgba(0,0,0,0.3);
-      margin: 0 0.5rem;
-    }
-    @keyframes marquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-
-    /* ─── ABOUT ──────────────────────────────────────────────────── */
-    #about {
-      padding: 8rem 0;
-      position: relative;
-    }
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6rem;
-      align-items: center;
-    }
-    .about-visual {
-      position: relative;
-    }
-    .about-img-frame {
-      position: relative;
-      aspect-ratio: 3/4;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
-    .about-img-placeholder {
-      width: 100%;
-      height: 100%;
-      background:
-        linear-gradient(135deg, #0a0a0a 0%, #1a1508 50%, #0a0a0a 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .about-img-placeholder svg {
-      width: 80px;
-      height: 80px;
-      opacity: 0.2;
-    }
-    .about-img-frame::before {
-      content: 'PHOTO';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: var(--font-head);
-      font-size: 0.75rem;
-      letter-spacing: 0.3em;
-      color: var(--gold-dim);
-      z-index: 1;
-    }
-    /* Gold corner accents */
-    .about-img-frame::after {
-      content: '';
-      position: absolute;
-      top: -1px; left: -1px;
-      width: 40px; height: 40px;
-      border-top: 2px solid var(--gold);
-      border-left: 2px solid var(--gold);
-    }
-    .corner-br {
-      position: absolute;
-      bottom: -1px; right: -1px;
-      width: 40px; height: 40px;
-      border-bottom: 2px solid var(--gold);
-      border-right: 2px solid var(--gold);
-    }
-    .about-badge {
-      position: absolute;
-      bottom: -1.5rem;
-      right: -1.5rem;
-      width: 110px;
-      height: 110px;
-      background: var(--gold);
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      box-shadow: 0 0 40px rgba(201,168,76,0.3);
-    }
-    .about-badge strong {
-      font-family: var(--font-head);
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--black);
-      line-height: 1;
-    }
-    .about-badge span {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: rgba(0,0,0,0.7);
-    }
-    .about-text h2 {
-      font-family: var(--font-head);
-      font-size: clamp(2.5rem, 5vw, 4rem);
-      font-weight: 800;
-      line-height: 1.05;
-      margin-bottom: 1.5rem;
-      letter-spacing: -0.02em;
-    }
-    .about-text p {
-      color: var(--grey);
-      line-height: 1.8;
-      margin-bottom: 1.5rem;
-      font-size: 15px;
-    }
-    .about-stats {
-      display: flex;
-      gap: 2.5rem;
-      margin: 2.5rem 0;
-      padding-top: 2.5rem;
-      border-top: 1px solid var(--border-dim);
-    }
-    .stat-item strong {
-      display: block;
-      font-family: var(--font-head);
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--gold);
-      line-height: 1;
-    }
-    .stat-item span {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--grey);
-    }
-    .about-specialties {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 2rem;
-    }
-    .specialty-tag {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 0.4rem 0.9rem;
-      border: 1px solid var(--border);
-      color: var(--gold);
-      border-radius: 2px;
-      transition: all 0.25s;
-    }
-    .specialty-tag:hover {
-      background: var(--gold);
-      color: var(--black);
-      border-color: var(--gold);
-      cursor: default;
-    }
-
-    /* ─── SERVICES ───────────────────────────────────────────────── */
-    #services {
-      padding: 8rem 0;
-      background: var(--dark);
-      position: relative;
-      overflow: hidden;
-    }
-    #services::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--gold-dim), transparent);
-    }
-    #services::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--gold-dim), transparent);
-    }
-    .services-header {
-      text-align: center;
-      margin-bottom: 5rem;
-    }
-    .services-header .section-label { justify-content: center; }
-    .services-header h2 {
-      font-family: var(--font-head);
-      font-size: clamp(2.5rem, 5vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5px;
-      background: var(--border-dim);
-    }
-    .service-card {
-      background: var(--dark);
-      padding: 3rem 2.5rem;
-      position: relative;
-      overflow: hidden;
-      cursor: default;
-      transition: background 0.4s var(--ease-out);
-    }
-    .service-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 70% 70% at 50% 0%, rgba(201,168,76,0.06), transparent);
-      opacity: 0;
-      transition: opacity 0.4s;
-    }
-    .service-card:hover { background: var(--surface); }
-    .service-card:hover::before { opacity: 1; }
-    .service-card:hover .service-number { color: var(--gold); }
-    .service-number {
-      font-family: var(--font-head);
-      font-size: 4rem;
-      font-weight: 800;
-      color: rgba(255,255,255,0.04);
-      line-height: 1;
-      margin-bottom: 1.5rem;
-      transition: color 0.4s;
-      letter-spacing: -0.05em;
-    }
-    .service-icon {
-      width: 44px;
-      height: 44px;
-      margin-bottom: 1.5rem;
-      color: var(--gold);
-    }
-    .service-card h3 {
-      font-family: var(--font-head);
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      letter-spacing: -0.01em;
-    }
-    .service-card p {
-      font-size: 14px;
-      color: var(--grey);
-      line-height: 1.8;
-      margin-bottom: 1.5rem;
-    }
-    .service-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .service-list li {
-      font-size: 13px;
-      color: var(--grey-light);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .service-list li::before {
-      content: '';
-      display: block;
-      width: 16px;
-      height: 1px;
-      background: var(--gold);
-      flex-shrink: 0;
-    }
-    .service-gold-line {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(to right, var(--gold), var(--gold-dim));
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.4s var(--ease-out);
-    }
-    .service-card:hover .service-gold-line { transform: scaleX(1); }
-
-    /* ─── GALLERY ────────────────────────────────────────────────── */
-    #gallery {
-      padding: 8rem 0;
-    }
-    .gallery-header {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      margin-bottom: 3rem;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-    }
-    .gallery-header h2 {
-      font-family: var(--font-head);
-      font-size: clamp(2.5rem, 5vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      line-height: 1;
-    }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      grid-template-rows: auto;
-      gap: 8px;
-    }
-    .gallery-item {
-      position: relative;
-      overflow: hidden;
-      background: var(--surface);
-      cursor: pointer;
-    }
-    .gallery-item:nth-child(1) { grid-column: span 5; grid-row: span 2; }
-    .gallery-item:nth-child(2) { grid-column: span 4; }
-    .gallery-item:nth-child(3) { grid-column: span 3; }
-    .gallery-item:nth-child(4) { grid-column: span 4; }
-    .gallery-item:nth-child(5) { grid-column: span 3; }
-    .gallery-item:nth-child(6) { grid-column: span 5; }
-    .gallery-item:nth-child(7) { grid-column: span 4; }
-    .gallery-item:nth-child(8) { grid-column: span 3; }
-
-    .gallery-placeholder {
-      width: 100%;
-      aspect-ratio: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-    .gallery-item:nth-child(1) .gallery-placeholder { aspect-ratio: 3/4; }
-    .gallery-item:nth-child(6) .gallery-placeholder { aspect-ratio: 16/9; }
-
-    /* Each gallery item gets a unique dark art gradient */
-    .gallery-item:nth-child(1) .gallery-placeholder { background: linear-gradient(160deg, #1a1208 0%, #0d0d0d 60%, #1a0f00 100%); }
-    .gallery-item:nth-child(2) .gallery-placeholder { background: linear-gradient(200deg, #0a0a0a 0%, #1a1208 100%); }
-    .gallery-item:nth-child(3) .gallery-placeholder { background: linear-gradient(120deg, #111108 0%, #0a0a0a 100%); }
-    .gallery-item:nth-child(4) .gallery-placeholder { background: linear-gradient(170deg, #0f0e08 0%, #1a1400 100%); }
-    .gallery-item:nth-child(5) .gallery-placeholder { background: linear-gradient(220deg, #0a0a08 0%, #141208 100%); }
-    .gallery-item:nth-child(6) .gallery-placeholder { background: linear-gradient(145deg, #121008 0%, #0a0a0a 100%); }
-    .gallery-item:nth-child(7) .gallery-placeholder { background: linear-gradient(190deg, #151208 0%, #0d0b08 100%); }
-    .gallery-item:nth-child(8) .gallery-placeholder { background: linear-gradient(130deg, #111108 0%, #0e0e0a 100%); }
-
-    .gallery-label {
-      position: absolute;
-      bottom: 0.75rem;
-      left: 0.75rem;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(201,168,76,0.4);
-    }
-    .gallery-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.35s;
-    }
-    .gallery-item:hover .gallery-overlay { opacity: 1; }
-    .gallery-overlay-text {
-      font-family: var(--font-head);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--gold);
-      border: 1px solid var(--gold);
-      padding: 0.6rem 1.2rem;
-      transform: translateY(8px);
-      transition: transform 0.35s var(--ease-out);
-    }
-    .gallery-item:hover .gallery-overlay-text { transform: translateY(0); }
-
-    /* Gallery placeholder icon */
-    .gallery-icon {
-      opacity: 0.06;
-      width: 48px;
-      height: 48px;
-      color: var(--gold);
-    }
-
-    /* ─── PROCESS ────────────────────────────────────────────────── */
-    #process {
-      padding: 8rem 0;
-      background: var(--dark);
-      position: relative;
-    }
-    #process::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--gold-dim), transparent);
-    }
-    .process-header {
-      text-align: center;
-      margin-bottom: 5rem;
-    }
-    .process-header .section-label { justify-content: center; }
-    .process-header h2 {
-      font-family: var(--font-head);
-      font-size: clamp(2.5rem, 5vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    .process-steps {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0;
-      position: relative;
-    }
-    .process-steps::before {
-      content: '';
-      position: absolute;
-      top: 28px;
-      left: 12%;
-      right: 12%;
-      height: 1px;
-      background: linear-gradient(to right, var(--gold), rgba(201,168,76,0.2), var(--gold));
-      z-index: 0;
-    }
-    .process-step {
-      text-align: center;
-      padding: 0 1.5rem;
-      position: relative;
-      z-index: 1;
-    }
-    .step-num {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      border: 1px solid var(--gold);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1.5rem;
-      font-family: var(--font-head);
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--gold);
-      background: var(--dark);
-      position: relative;
-    }
-    .process-step h4 {
-      font-family: var(--font-head);
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-    }
-    .process-step p {
-      font-size: 13px;
-      color: var(--grey);
-      line-height: 1.7;
-    }
-
-    /* ─── BOOKING CTA ────────────────────────────────────────────── */
-    #booking {
-      padding: 8rem 0;
-      position: relative;
-      overflow: hidden;
-      text-align: center;
-    }
-    .booking-orb {
-      position: absolute;
-      width: 800px;
-      height: 800px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(201,168,76,0.08), transparent 70%);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-    .booking-content {
-      position: relative;
-      z-index: 1;
-      max-width: 700px;
-      margin: 0 auto;
-    }
-    .booking-big-text {
-      font-family: var(--font-head);
-      font-size: clamp(3.5rem, 10vw, 9rem);
-      font-weight: 800;
-      line-height: 0.9;
-      letter-spacing: -0.04em;
-      margin-bottom: 2rem;
-    }
-    .booking-big-text .line1 { color: var(--white); display: block; }
-    .booking-big-text .line2 {
-      -webkit-text-stroke: 2px var(--gold);
-      color: transparent;
-      display: block;
-    }
-    .booking-sub {
-      font-size: 15px;
-      color: var(--grey);
-      line-height: 1.8;
-      margin-bottom: 3rem;
-    }
-    .booking-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    /* ─── CONTACT ────────────────────────────────────────────────── */
-    #contact {
-      padding: 8rem 0 0;
-      border-top: 1px solid var(--border-dim);
-    }
-    .contact-grid {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 6rem;
-      margin-bottom: 5rem;
-    }
-    .contact-left h2 {
-      font-family: var(--font-head);
-      font-size: clamp(2.5rem, 4vw, 3.5rem);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
-      margin-bottom: 1.5rem;
-    }
-    .contact-left p {
-      color: var(--grey);
-      font-size: 15px;
-      line-height: 1.8;
-      margin-bottom: 2.5rem;
-      max-width: 440px;
-    }
-    .contact-info {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    .contact-info-item {
-      display: flex;
-      gap: 1rem;
-      align-items: flex-start;
-    }
-    .contact-info-icon {
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: var(--gold);
-    }
-    .contact-info-icon svg { width: 18px; height: 18px; }
-    .contact-info-text strong {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--grey);
-      margin-bottom: 0.2rem;
-    }
-    .contact-info-text span {
-      font-size: 15px;
-      color: var(--white);
-    }
-    .contact-right {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    .contact-form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .contact-form-group label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--grey);
-    }
-    .contact-form-group input,
-    .contact-form-group textarea,
-    .contact-form-group select {
-      background: var(--surface);
-      border: 1px solid var(--border-dim);
-      color: var(--white);
-      font-family: var(--font-body);
-      font-size: 14px;
-      padding: 0.9rem 1rem;
-      border-radius: 2px;
-      outline: none;
-      transition: border-color 0.25s;
-      -webkit-appearance: none;
-    }
-    .contact-form-group input:focus,
-    .contact-form-group textarea:focus,
-    .contact-form-group select:focus {
-      border-color: var(--gold);
-    }
-    .contact-form-group textarea { resize: vertical; min-height: 100px; }
-    .contact-form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    .form-submit {
-      width: 100%;
-      justify-content: center;
-      font-size: 13px;
-      padding: 1.1rem;
-      margin-top: 0.5rem;
-    }
-
-    /* Social links */
-    .social-links {
-      display: flex;
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-    .social-link {
-      width: 44px;
-      height: 44px;
-      border: 1px solid var(--border-dim);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--grey);
-      transition: all 0.25s;
-      cursor: pointer;
-    }
-    .social-link:hover {
-      border-color: var(--gold);
-      color: var(--gold);
-      background: rgba(201,168,76,0.06);
-    }
-    .social-link svg { width: 18px; height: 18px; }
-
-    /* ─── FOOTER ─────────────────────────────────────────────────── */
-    footer {
-      padding: 2.5rem 0;
-      border-top: 1px solid var(--border-dim);
-    }
-    .footer-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    .footer-logo {
-      font-family: var(--font-head);
-      font-size: 1.2rem;
-      font-weight: 800;
-      letter-spacing: 0.15em;
-    }
-    .footer-logo span { color: var(--gold); }
-    .footer-copy {
-      font-size: 12px;
-      color: var(--grey);
-      text-align: center;
-    }
-    .footer-rights {
-      font-size: 12px;
-      color: rgba(255,255,255,0.2);
-    }
-
-    /* ─── Lightbox ───────────────────────────────────────────────── */
-    .lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.95);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-    }
-    .lightbox.open { display: flex; }
-    .lightbox-close {
-      position: absolute;
-      top: 1.5rem;
-      right: 1.5rem;
-      font-size: 2rem;
-      color: var(--grey);
-      cursor: pointer;
-      transition: color 0.25s;
-      background: none;
-      border: none;
-      line-height: 1;
-    }
-    .lightbox-close:hover { color: var(--gold); }
-    .lightbox-content {
-      max-width: 700px;
-      width: 90%;
-      text-align: center;
-    }
-    .lightbox-placeholder {
-      width: 100%;
-      aspect-ratio: 4/5;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--gold-dim);
-      font-family: var(--font-head);
-      font-size: 0.8rem;
-      letter-spacing: 0.2em;
-    }
-    .lightbox-caption {
-      margin-top: 1rem;
-      font-size: 12px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--grey);
-    }
-
-    /* ─── Reduced Motion ─────────────────────────────────────────── */
-    @media (prefers-reduced-motion: reduce) {
-      .orb, .marquee-track, .scroll-line { animation: none; }
-      .reveal { transition: none; opacity: 1; transform: none; }
-      [style*="animation"] { animation: none !important; }
-    }
-
-    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
-    @media (max-width: 1024px) {
-      .about-grid { grid-template-columns: 1fr; gap: 4rem; }
-      .about-visual { max-width: 400px; margin: 0 auto; }
-      .services-grid { grid-template-columns: repeat(2, 1fr); }
-      .services-grid .service-card:last-child { grid-column: span 2; }
-      .process-steps { grid-template-columns: repeat(2, 1fr); gap: 3rem; }
-      .process-steps::before { display: none; }
-      .contact-grid { grid-template-columns: 1fr; gap: 4rem; }
-    }
-
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .hamburger { display: flex; }
-      .services-grid { grid-template-columns: 1fr; }
-      .services-grid .service-card:last-child { grid-column: span 1; }
-      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-      .gallery-item { grid-column: span 1 !important; grid-row: span 1 !important; }
-      .about-stats { flex-wrap: wrap; gap: 1.5rem; }
-      .contact-form-row { grid-template-columns: 1fr; }
-      .footer-inner { flex-direction: column; text-align: center; }
-      .process-steps { grid-template-columns: 1fr 1fr; }
-    }
-
-    @media (max-width: 480px) {
-      .gallery-grid { grid-template-columns: 1fr; }
-      .process-steps { grid-template-columns: 1fr; }
-      .booking-big-text { letter-spacing: -0.03em; }
+    /* ══════════════════════════════════════════════════════════ */
+    /* RESPONSIVE */
+    /* ══════════════════════════════════════════════════════════ */
+    @media(max-width:1024px){
+      .h-content{grid-template-columns:1fr;text-align:center}
+      .h-text{text-align:center}
+      .h-tag{margin:0 auto 2.5rem}
+      .h-btns{justify-content:center}
+      .machine-wrap{order:-1}
+      .about-grid{grid-template-columns:1fr;gap:4rem}
+      .about-vis{max-width:380px;margin:0 auto}
+      .srv-grid{grid-template-columns:repeat(2,1fr)}
+      .srv-grid .srv:last-child{grid-column:span 2}
+      .proc-steps{grid-template-columns:repeat(2,1fr);gap:3rem}
+      .proc-steps::before{display:none}
+      .ct-grid{grid-template-columns:1fr;gap:4rem}
+    }
+    @media(max-width:768px){
+      .nav-links{display:none}
+      .ham{display:flex}
+      .srv-grid{grid-template-columns:1fr}
+      .srv-grid .srv:last-child{grid-column:span 1}
+      .stats{flex-wrap:wrap;gap:1.5rem}
+      .fg-row{grid-template-columns:1fr}
+      .ft-in{flex-direction:column;text-align:center}
+    }
+    @media(max-width:480px){
+      .proc-steps{grid-template-columns:1fr}
+      .bk-big{letter-spacing:-.03em}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .orb,.mq-track,.s-line,.machine-svg,
+      .needle-group,.machine-led,.needle-glow,
+      .spark,.bk-ring,.bk-ring2{animation:none!important}
+      .rv{transition:none;opacity:1;transform:none}
+      .h-title .glitch::before,.h-title .glitch::after{animation:none}
     }
   </style>
 </head>
 <body>
 
-  <!-- ─── NAV ───────────────────────────────────────────────────── -->
-  <nav id="navbar" role="navigation" aria-label="Main navigation">
-    <div class="container nav-inner">
-      <a href="#hero" class="nav-logo" aria-label="Vain Tattoo home">
-        VAIN<span>.</span>
-      </a>
-      <ul class="nav-links" role="list">
-        <li><a href="#about">About</a></li>
-        <li><a href="#services">Services</a></li>
-        <li><a href="#gallery">Gallery</a></li>
-        <li><a href="#contact">Contact</a></li>
-        <li><a href="#booking" class="nav-cta">Book Now</a></li>
-      </ul>
-      <button class="hamburger" aria-label="Open menu" aria-expanded="false" id="hamburger">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </nav>
+<!-- Cursor -->
+<div id="cursor" aria-hidden="true"></div>
 
-  <!-- Mobile Nav -->
-  <div class="mobile-nav" id="mobileNav" role="dialog" aria-label="Mobile navigation">
-    <button class="mobile-close" id="mobileClose" aria-label="Close menu">&times;</button>
-    <a href="#about"    onclick="closeMobileNav()">About</a>
-    <a href="#services" onclick="closeMobileNav()">Services</a>
-    <a href="#gallery"  onclick="closeMobileNav()">Gallery</a>
-    <a href="#booking"  onclick="closeMobileNav()">Book Now</a>
-    <a href="#contact"  onclick="closeMobileNav()">Contact</a>
+<!-- ── NAV ──────────────────────────────────────────────────────── -->
+<nav id="nav" role="navigation" aria-label="ניווט ראשי">
+  <div class="container nav-in">
+    <a href="#hero" class="nav-logo" aria-label="VAIN - עמוד הבית">VAIN<span>.</span></a>
+    <ul class="nav-links" role="list">
+      <li><a href="#about">אודות</a></li>
+      <li><a href="#services">שירותים</a></li>
+      <li><a href="#gallery">גלריה</a></li>
+      <li><a href="#contact">צור קשר</a></li>
+      <li><a href="#booking" class="nav-cta">קבע תור</a></li>
+    </ul>
+    <button class="ham" id="ham" aria-label="פתח תפריט" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
   </div>
+</nav>
+<div class="mnav" id="mnav" role="dialog" aria-label="תפריט ניייד">
+  <button class="mnav-x" id="mnavX" aria-label="סגור תפריט">&times;</button>
+  <a href="#about"    onclick="closeMnav()">אודות</a>
+  <a href="#services" onclick="closeMnav()">שירותים</a>
+  <a href="#gallery"  onclick="closeMnav()">גלריה</a>
+  <a href="#booking"  onclick="closeMnav()">קבע תור</a>
+  <a href="#contact"  onclick="closeMnav()">צור קשר</a>
+</div>
 
-  <!-- ─── HERO ──────────────────────────────────────────────────── -->
-  <section id="hero" role="banner">
-    <div class="hero-bg" aria-hidden="true">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
-      <div class="hero-grid"></div>
-    </div>
-    <div class="hero-content">
-      <p class="hero-eyebrow">Herzliya, Israel · Est. 2018</p>
-      <h1 class="hero-title">
-        VA<span class="stroke">IN</span>
+<!-- ── HERO ─────────────────────────────────────────────────────── -->
+<section id="hero" role="banner">
+  <div class="h-grid" aria-hidden="true"></div>
+  <div class="orb o1" aria-hidden="true"></div>
+  <div class="orb o2" aria-hidden="true"></div>
+  <div class="orb o3" aria-hidden="true"></div>
+
+  <!-- Decorative SVG path (draws on scroll) -->
+  <svg class="deco-svg" style="top:10%;left:5%;width:300px;height:300px;opacity:.12" viewBox="0 0 300 300" aria-hidden="true">
+    <circle class="dp" id="dp1" cx="150" cy="150" r="120"/>
+    <circle class="dp" id="dp2" cx="150" cy="150" r="90"/>
+    <circle class="dp" id="dp3" cx="150" cy="150" r="60"/>
+    <path class="dp" id="dp4" d="M150 30 L270 210 L30 210 Z"/>
+    <path class="dp" id="dp5" d="M150 80 L230 200 L70 200 Z"/>
+  </svg>
+
+  <div class="h-content">
+    <!-- Text (right side in RTL) -->
+    <div class="h-text">
+      <p class="h-eyebrow">הרצליה, ישראל &nbsp;·&nbsp; מאז 2018</p>
+      <h1 class="h-title">
+        <span class="glitch" data-text="VAIN">VAIN</span><br>
+        <span class="stroke">ART</span>
       </h1>
-      <p class="hero-subtitle">Tattoo <span>&amp;</span> Piercing Studio</p>
-      <div class="hero-divider" aria-hidden="true"></div>
-      <p class="hero-tagline">
-        Art etched into skin. Every mark tells a story that lasts a lifetime.
-      </p>
-      <div class="hero-actions">
-        <a href="#booking" class="btn btn-gold">Book a Session</a>
-        <a href="#gallery" class="btn btn-outline">View Portfolio</a>
+      <p class="h-sub">קעקועים <span>&amp;</span> פירסינג</p>
+      <p class="h-tag">אמנות חקוקה בעור.<br>כל סימן מספר סיפור שנמשך לנצח.</p>
+      <div class="h-btns">
+        <a href="#booking" class="btn btn-gold">קבע תור</a>
+        <a href="#gallery" class="btn btn-out">הגלריה</a>
       </div>
     </div>
-    <div class="scroll-indicator" aria-hidden="true">
-      <span>Scroll</span>
-      <div class="scroll-line"></div>
-    </div>
-  </section>
 
-  <!-- ─── MARQUEE ───────────────────────────────────────────────── -->
-  <div class="marquee-strip" aria-hidden="true">
-    <div class="marquee-track">
-      <span class="marquee-item">Black &amp; Grey <span class="marquee-dot">·</span> Color Realism <span class="marquee-dot">·</span> Micro Realism <span class="marquee-dot">·</span> Portrait <span class="marquee-dot">·</span> Minimalism <span class="marquee-dot">·</span> Fine Line <span class="marquee-dot">·</span> Piercing <span class="marquee-dot">·</span></span>
-      <span class="marquee-item">Black &amp; Grey <span class="marquee-dot">·</span> Color Realism <span class="marquee-dot">·</span> Micro Realism <span class="marquee-dot">·</span> Portrait <span class="marquee-dot">·</span> Minimalism <span class="marquee-dot">·</span> Fine Line <span class="marquee-dot">·</span> Piercing <span class="marquee-dot">·</span></span>
-      <span class="marquee-item">Black &amp; Grey <span class="marquee-dot">·</span> Color Realism <span class="marquee-dot">·</span> Micro Realism <span class="marquee-dot">·</span> Portrait <span class="marquee-dot">·</span> Minimalism <span class="marquee-dot">·</span> Fine Line <span class="marquee-dot">·</span> Piercing <span class="marquee-dot">·</span></span>
-      <span class="marquee-item">Black &amp; Grey <span class="marquee-dot">·</span> Color Realism <span class="marquee-dot">·</span> Micro Realism <span class="marquee-dot">·</span> Portrait <span class="marquee-dot">·</span> Minimalism <span class="marquee-dot">·</span> Fine Line <span class="marquee-dot">·</span> Piercing <span class="marquee-dot">·</span></span>
+    <!-- Machine (left side in RTL) -->
+    <div class="machine-wrap" aria-hidden="true">
+      <div style="position:relative;display:inline-block">
+        <!-- Sparks -->
+        <div class="sparks" style="bottom:20px;right:50%;transform:translateX(50%)">
+          <div class="spark"></div><div class="spark"></div>
+          <div class="spark"></div><div class="spark"></div>
+        </div>
+
+        <svg class="machine-svg" viewBox="0 0 160 290" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="mg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#141414"/>
+              <stop offset="50%" stop-color="#1e1e1e"/>
+              <stop offset="100%" stop-color="#141414"/>
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+
+          <!-- Power cord -->
+          <path d="M55 105 Q28 105 22 145 Q16 185 8 208"
+                stroke="#1c1c1c" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+          <!-- Body -->
+          <rect x="52" y="55" width="56" height="125" rx="11"
+                fill="url(#mg)" stroke="#C9A84C" stroke-width="1.4"/>
+
+          <!-- Top motor housing -->
+          <rect x="58" y="18" width="44" height="42" rx="7"
+                fill="#0e0e0e" stroke="#C9A84C" stroke-width="1.2"/>
+          <ellipse cx="80" cy="18" rx="24" ry="7"
+                   fill="#111" stroke="#C9A84C" stroke-width="1"/>
+
+          <!-- Grip texture -->
+          <line x1="52" y1="88"  x2="108" y2="88"  stroke="#C9A84C" stroke-width=".5" opacity=".3"/>
+          <line x1="52" y1="103" x2="108" y2="103" stroke="#C9A84C" stroke-width=".5" opacity=".3"/>
+          <line x1="52" y1="118" x2="108" y2="118" stroke="#C9A84C" stroke-width=".5" opacity=".3"/>
+          <line x1="52" y1="133" x2="108" y2="133" stroke="#C9A84C" stroke-width=".5" opacity=".3"/>
+          <line x1="52" y1="148" x2="108" y2="148" stroke="#C9A84C" stroke-width=".5" opacity=".3"/>
+          <line x1="52" y1="163" x2="108" y2="163" stroke="#C9A84C" stroke-width=".5" opacity=".3"/>
+
+          <!-- Brand on body -->
+          <text x="80" y="135" text-anchor="middle"
+                font-family="Syne,sans-serif" font-size="9"
+                fill="#C9A84C" opacity=".55" letter-spacing="4">VAIN</text>
+
+          <!-- Power button -->
+          <circle cx="80" cy="50" r="6" fill="none" stroke="#C9A84C" stroke-width="1"/>
+          <line x1="80" y1="44" x2="80" y2="50" stroke="#C9A84C" stroke-width="1.2"/>
+
+          <!-- LEDs -->
+          <circle class="machine-led" cx="80" cy="33" r="3.5"
+                  fill="#C9A84C" filter="url(#glow)"/>
+          <circle cx="66" cy="33" r="2" fill="#3a2e10"/>
+          <circle cx="94" cy="33" r="2" fill="#3a2e10"/>
+
+          <!-- Cartridge collar -->
+          <rect x="64" y="180" width="32" height="32" rx="5"
+                fill="#0d0d0d" stroke="#C9A84C" stroke-width="1.1"/>
+          <rect x="70" y="186" width="20" height="4" rx="2" fill="#1a1a1a"/>
+
+          <!-- Needle (animated) -->
+          <g class="needle-group">
+            <line x1="80" y1="212" x2="80" y2="268"
+                  stroke="#C9A84C" stroke-width="1.6"/>
+            <polygon points="80,274 76.5,263 83.5,263" fill="#C9A84C"/>
+          </g>
+
+          <!-- Needle glow -->
+          <ellipse class="needle-glow" cx="80" cy="274" rx="10" ry="4"
+                   fill="#C9A84C" opacity=".2"/>
+          <!-- Ink drop -->
+          <circle cx="80" cy="278" r="2" fill="#C9A84C" opacity=".6"
+                  style="animation:ngP .06s ease-in-out infinite alternate"/>
+        </svg>
+      </div>
     </div>
   </div>
 
-  <!-- ─── ABOUT ─────────────────────────────────────────────────── -->
-  <section id="about" aria-labelledby="about-title">
-    <div class="container">
-      <div class="about-grid">
+  <div class="scroll-ind" aria-hidden="true">
+    <span>גלול</span>
+    <div class="s-line"></div>
+  </div>
+</section>
 
-        <!-- Visual -->
-        <div class="about-visual reveal">
-          <div class="about-img-frame" role="img" aria-label="Portrait of Eyal Vain">
-            <div class="about-img-placeholder">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold);opacity:0.15;width:80px;height:80px;" aria-hidden="true">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-              </svg>
-            </div>
-            <div class="corner-br" aria-hidden="true"></div>
+<!-- ── MARQUEE ───────────────────────────────────────────────────── -->
+<div class="marquee" aria-hidden="true">
+  <div class="mq-track">
+    <span class="mq-item">שחור ואפור <span class="mq-dot">·</span> ריאליזם צבעוני <span class="mq-dot">·</span> מיקרו ריאליזם <span class="mq-dot">·</span> פורטרטים <span class="mq-dot">·</span> מינימליזם <span class="mq-dot">·</span> ליין דק <span class="mq-dot">·</span> פירסינג מקצועי <span class="mq-dot">·</span></span>
+    <span class="mq-item">שחור ואפור <span class="mq-dot">·</span> ריאליזם צבעוני <span class="mq-dot">·</span> מיקרו ריאליזם <span class="mq-dot">·</span> פורטרטים <span class="mq-dot">·</span> מינימליזם <span class="mq-dot">·</span> ליין דק <span class="mq-dot">·</span> פירסינג מקצועי <span class="mq-dot">·</span></span>
+    <span class="mq-item">שחור ואפור <span class="mq-dot">·</span> ריאליזם צבעוני <span class="mq-dot">·</span> מיקרו ריאליזם <span class="mq-dot">·</span> פורטרטים <span class="mq-dot">·</span> מינימליזם <span class="mq-dot">·</span> ליין דק <span class="mq-dot">·</span> פירסינג מקצועי <span class="mq-dot">·</span></span>
+    <span class="mq-item">שחור ואפור <span class="mq-dot">·</span> ריאליזם צבעוני <span class="mq-dot">·</span> מיקרו ריאליזם <span class="mq-dot">·</span> פורטרטים <span class="mq-dot">·</span> מינימליזם <span class="mq-dot">·</span> ליין דק <span class="mq-dot">·</span> פירסינג מקצועי <span class="mq-dot">·</span></span>
+  </div>
+</div>
+
+<!-- ── ABOUT ──────────────────────────────────────────────────────── -->
+<section id="about" aria-labelledby="about-h">
+  <div class="container">
+    <div class="about-grid">
+
+      <!-- Text (RTL: first = right) -->
+      <div class="about-txt">
+        <p class="tag rv">האמן</p>
+        <h2 id="about-h" class="rv d1">
+          איל<br><span class="gold">ויין.</span>
+        </h2>
+        <div class="tags-wrap rv d2" role="list" aria-label="התמחויות">
+          <span class="sp-tag" role="listitem">שחור ואפור</span>
+          <span class="sp-tag" role="listitem">ריאליזם צבעוני</span>
+          <span class="sp-tag" role="listitem">מיקרו ריאליזם</span>
+          <span class="sp-tag" role="listitem">מינימליזם</span>
+          <span class="sp-tag" role="listitem">פורטרטים</span>
+          <span class="sp-tag" role="listitem">ליין דק</span>
+        </div>
+        <p class="rv d2">עם למעלה מ-6 שנות מומחיות, איל ויין בנה לעצמו שם כאחד מאמני הקעקועים הבולטים בישראל. ממוקם בסטודיו VAIN בהרצליה, כל יצירה נוצרת מאפס — עם דיוק כירורגי וכבוד עמוק לאמנות.</p>
+        <p class="rv d3">בין אם מדובר בפורטרט היפר-ריאליסטי, בקומפוזיציה עדינה של ליין דק, או בעבודת שחור-אפור נועזת — איל מביא תשומת לב אובססיבית לפרטים ועין אמנותית ייחודית לכל סשן.</p>
+        <div class="stats rv d3" role="list">
+          <div class="stat" role="listitem">
+            <strong class="count-up" data-target="500">0</strong><span>עבודות</span>
           </div>
-          <div class="about-badge" aria-label="6 years of experience">
-            <strong>6+</strong>
-            <span>Years Exp.</span>
+          <div class="stat" role="listitem">
+            <strong class="count-up" data-target="6">0</strong><span>שנות ניסיון</span>
+          </div>
+          <div class="stat" role="listitem">
+            <strong class="count-up" data-target="100">0</strong><span>% מותאם אישית</span>
           </div>
         </div>
-
-        <!-- Text -->
-        <div class="about-text">
-          <p class="section-label">The Artist</p>
-          <h2 id="about-title" class="reveal reveal-delay-1">
-            Eyal<br /><span class="gold">Vain.</span>
-          </h2>
-          <div class="about-specialties reveal reveal-delay-2" role="list" aria-label="Specialties">
-            <span class="specialty-tag" role="listitem">Black &amp; Grey</span>
-            <span class="specialty-tag" role="listitem">Color Realism</span>
-            <span class="specialty-tag" role="listitem">Micro Realism</span>
-            <span class="specialty-tag" role="listitem">Minimalism</span>
-            <span class="specialty-tag" role="listitem">Portraits</span>
-            <span class="specialty-tag" role="listitem">Fine Line</span>
-          </div>
-          <p class="reveal reveal-delay-2">
-            With over 6 years of mastery, Eyal Vain has built a reputation as one of Israel's leading tattoo artists. Based at Studio Vain in Herzliya, every piece is crafted with surgical precision and a deep respect for the art form.
-          </p>
-          <p class="reveal reveal-delay-3">
-            Whether it's a hyper-realistic portrait, a delicate fine line composition, or a bold black and grey piece — Eyal brings an obsessive attention to detail and a unique artistic vision to every session.
-          </p>
-          <div class="about-stats reveal reveal-delay-3" role="list" aria-label="Statistics">
-            <div class="stat-item" role="listitem">
-              <strong>500+</strong>
-              <span>Works Done</span>
-            </div>
-            <div class="stat-item" role="listitem">
-              <strong>6+</strong>
-              <span>Years Active</span>
-            </div>
-            <div class="stat-item" role="listitem">
-              <strong>100%</strong>
-              <span>Custom Designs</span>
-            </div>
-          </div>
-          <div class="reveal reveal-delay-4">
-            <a href="#booking" class="btn btn-gold">Start Your Journey</a>
-          </div>
+        <div class="rv d4">
+          <a href="#booking" class="btn btn-gold">התחל את המסע</a>
         </div>
-
       </div>
+
+      <!-- Visual (RTL: second = left) -->
+      <div class="about-vis rv">
+        <div class="a-frame" role="img" aria-label="תמונת האמן איל ויין">
+          <div class="a-ph"></div>
+          <div class="corner-bl" aria-hidden="true"></div>
+        </div>
+        <div class="badge" aria-label="6 שנות ניסיון">
+          <strong>6+</strong><span>שנות ניסיון</span>
+        </div>
+      </div>
+
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ─── SERVICES ──────────────────────────────────────────────── -->
-  <section id="services" aria-labelledby="services-title">
-    <div class="container">
-      <div class="services-header">
-        <p class="section-label reveal">What We Offer</p>
-        <h2 id="services-title" class="reveal reveal-delay-1">Our Services</h2>
-      </div>
-
-      <div class="services-grid" role="list">
-
-        <!-- Tattoo -->
-        <div class="service-card reveal" role="listitem">
-          <p class="service-number" aria-hidden="true">01</p>
-          <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
-          </svg>
-          <h3>Custom Tattoos</h3>
-          <p>Every design is created from scratch — tailored to your body, story, and vision. No templates, no compromises.</p>
-          <ul class="service-list" aria-label="Tattoo styles">
-            <li>Black &amp; Grey Realism</li>
-            <li>Color Realism</li>
-            <li>Micro &amp; Fine Line</li>
-            <li>Minimalist &amp; Geometric</li>
-            <li>Portrait &amp; Illustration</li>
-          </ul>
-          <div class="service-gold-line" aria-hidden="true"></div>
-        </div>
-
-        <!-- Piercing -->
-        <div class="service-card reveal reveal-delay-1" role="listitem">
-          <p class="service-number" aria-hidden="true">02</p>
-          <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M2 12h2m16 0h2m-4.22-7.78-1.42 1.42M7.64 16.36l-1.42 1.42m0-11.2 1.42 1.42m8.48 8.48 1.42 1.42"/>
-          </svg>
-          <h3>Professional Piercing</h3>
-          <p>Precision piercing with premium implant-grade jewelry. Safety, hygiene, and aesthetics — in perfect balance.</p>
-          <ul class="service-list" aria-label="Piercing types">
-            <li>Ear — Helix, Conch, Daith</li>
-            <li>Septum &amp; Nostril</li>
-            <li>Eyebrow &amp; Surface</li>
-            <li>Oral &amp; Body</li>
-            <li>Premium Titanium Jewelry</li>
-          </ul>
-          <div class="service-gold-line" aria-hidden="true"></div>
-        </div>
-
-        <!-- Touch-ups -->
-        <div class="service-card reveal reveal-delay-2" role="listitem">
-          <p class="service-number" aria-hidden="true">03</p>
-          <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487 18.5 2.85a1.993 1.993 0 0 1 2.827 0l.826.828a1.993 1.993 0 0 1 0 2.827L7.654 19.988A4.502 4.502 0 0 1 5.07 21.25H3.75a.75.75 0 0 1-.75-.75v-1.32a4.5 4.5 0 0 1 1.26-2.583L16.862 4.487z"/>
-          </svg>
-          <h3>Touch-Ups &amp; Cover-Ups</h3>
-          <p>Transform an old piece or refresh fading ink. Expert cover-up work that turns regret into reclaimed art.</p>
-          <ul class="service-list" aria-label="Correction services">
-            <li>Color Correction</li>
-            <li>Fading Restoration</li>
-            <li>Creative Cover-Ups</li>
-            <li>Detail Enhancement</li>
-            <li>Free Consultation</li>
-          </ul>
-          <div class="service-gold-line" aria-hidden="true"></div>
-        </div>
-
-      </div>
+<!-- ── SERVICES ───────────────────────────────────────────────────── -->
+<section id="services" aria-labelledby="services-h">
+  <div class="container">
+    <div class="sec-hd">
+      <p class="tag rv">מה אנחנו מציעים</p>
+      <h2 id="services-h" class="rv d1">השירותים שלנו</h2>
     </div>
-  </section>
+    <div class="srv-grid" role="list">
 
-  <!-- ─── GALLERY ───────────────────────────────────────────────── -->
-  <section id="gallery" aria-labelledby="gallery-title">
+      <!-- 01 -->
+      <div class="srv rv" role="listitem" data-tilt>
+        <p class="srv-n" aria-hidden="true">01</p>
+        <svg class="srv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
+        </svg>
+        <h3>קעקועים מותאמים אישית</h3>
+        <p>כל עיצוב נוצר מאפס — מותאם לגוף, לסיפור ולחזון שלך. ללא תבניות, ללא פשרות.</p>
+        <ul class="srv-list" aria-label="סגנונות קעקוע">
+          <li>ריאליזם שחור ואפור</li>
+          <li>ריאליזם צבעוני</li>
+          <li>מיקרו וליין דק</li>
+          <li>מינימליזם וגאומטריה</li>
+          <li>פורטרטים ואיורים</li>
+        </ul>
+        <div class="srv-line" aria-hidden="true"></div>
+      </div>
+
+      <!-- 02 -->
+      <div class="srv rv d1" role="listitem" data-tilt>
+        <p class="srv-n" aria-hidden="true">02</p>
+        <svg class="srv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M2 12h2m16 0h2m-4.22-7.78-1.42 1.42M7.64 16.36l-1.42 1.42m0-11.2 1.42 1.42m8.48 8.48 1.42 1.42"/>
+        </svg>
+        <h3>פירסינג מקצועי</h3>
+        <p>פירסינג מדויק עם תכשיטים מדרגה רפואית. בטיחות, היגיינה ואסתטיקה — באיזון מושלם.</p>
+        <ul class="srv-list" aria-label="סוגי פירסינג">
+          <li>אוזן — הליקס, קונק, דייט</li>
+          <li>ספטום ונחיר</li>
+          <li>גבה ושטח</li>
+          <li>פה וגוף</li>
+          <li>תכשיטי טיטניום פרמיום</li>
+        </ul>
+        <div class="srv-line" aria-hidden="true"></div>
+      </div>
+
+      <!-- 03 -->
+      <div class="srv rv d2" role="listitem" data-tilt>
+        <p class="srv-n" aria-hidden="true">03</p>
+        <svg class="srv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487 18.5 2.85a1.993 1.993 0 0 1 2.827 0l.826.828a1.993 1.993 0 0 1 0 2.827L7.654 19.988A4.502 4.502 0 0 1 5.07 21.25H3.75a.75.75 0 0 1-.75-.75v-1.32a4.5 4.5 0 0 1 1.26-2.583L16.862 4.487z"/>
+        </svg>
+        <h3>תיקונים וכיסויים</h3>
+        <p>הפוך יצירה ישנה או רענן דיו דוהה. עבודות כיסוי מומחית שהופכות חרטה לאמנות מחודשת.</p>
+        <ul class="srv-list" aria-label="שירותי תיקון">
+          <li>תיקון צבע</li>
+          <li>שחזור דיו דוהה</li>
+          <li>כיסויים יצירתיים</li>
+          <li>שיפור פרטים</li>
+          <li>ייעוץ ראשוני חינם</li>
+        </ul>
+        <div class="srv-line" aria-hidden="true"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── GALLERY ────────────────────────────────────────────────────── -->
+<section id="gallery" aria-labelledby="gallery-h">
+  <div class="container">
+    <div class="gal-hd">
+      <div>
+        <p class="tag rv">פורטפוליו</p>
+        <h2 id="gallery-h" class="rv d1">עבודות נבחרות</h2>
+      </div>
+      <a href="#contact" class="btn btn-out rv d2">בקש עיצוב מותאם</a>
+    </div>
+  </div>
+
+  <!-- Full-width horizontal scroll -->
+  <div class="gal-scroll-wrap">
+    <div class="gal-scroll rv" id="galScroll" role="list" aria-label="גלריית עבודות">
+      <div style="width:5vw;flex-shrink:0" aria-hidden="true"></div>
+
+      <div class="gal-item rv" role="listitem" tabindex="0"
+           onclick="openLb('שחור ואפור')" onkeydown="if(event.key==='Enter')openLb('שחור ואפור')"
+           aria-label="קעקוע שחור ואפור">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">שחור ואפור</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d1" role="listitem" tabindex="0"
+           onclick="openLb('פורטרט')" onkeydown="if(event.key==='Enter')openLb('פורטרט')"
+           aria-label="קעקוע פורטרט">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">פורטרט</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d2" role="listitem" tabindex="0"
+           onclick="openLb('ליין דק')" onkeydown="if(event.key==='Enter')openLb('ליין דק')"
+           aria-label="קעקוע ליין דק">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">ליין דק</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d1" role="listitem" tabindex="0"
+           onclick="openLb('ריאליזם צבעוני')" onkeydown="if(event.key==='Enter')openLb('ריאליזם צבעוני')"
+           aria-label="קעקוע ריאליזם צבעוני">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">ריאליזם צבעוני</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d2" role="listitem" tabindex="0"
+           onclick="openLb('מינימליזם')" onkeydown="if(event.key==='Enter')openLb('מינימליזם')"
+           aria-label="קעקוע מינימליסטי">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">מינימליזם</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d3" role="listitem" tabindex="0"
+           onclick="openLb('גאומטריה')" onkeydown="if(event.key==='Enter')openLb('גאומטריה')"
+           aria-label="קעקוע גאומטרי">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">גאומטריה</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d2" role="listitem" tabindex="0"
+           onclick="openLb('פירסינג')" onkeydown="if(event.key==='Enter')openLb('פירסינג')"
+           aria-label="עבודת פירסינג">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">פירסינג</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div class="gal-item rv d3" role="listitem" tabindex="0"
+           onclick="openLb('איור')" onkeydown="if(event.key==='Enter')openLb('איור')"
+           aria-label="קעקוע איור">
+        <div class="gal-ph"><svg class="gal-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+        <span class="gal-lbl">איור</span>
+        <div class="gal-ov"><span class="gal-ov-txt">צפה בעבודה</span></div>
+      </div>
+
+      <div style="width:5vw;flex-shrink:0" aria-hidden="true"></div>
+    </div>
     <div class="container">
-      <div class="gallery-header">
-        <div>
-          <p class="section-label reveal">Portfolio</p>
-          <h2 id="gallery-title" class="reveal reveal-delay-1">Selected Works</h2>
-        </div>
-        <a href="#contact" class="btn btn-outline reveal reveal-delay-2">Request Custom</a>
+      <div class="drag-hint rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+        </svg>
+        <span>גרור לצפייה בעוד עבודות</span>
       </div>
-
-      <div class="gallery-grid" role="list" aria-label="Gallery of tattoo works">
-        <div class="gallery-item reveal" role="listitem" tabindex="0" onclick="openLightbox('Black & Grey Realism')" onkeydown="if(event.key==='Enter')openLightbox('Black & Grey Realism')" aria-label="Black and grey realism tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Black &amp; Grey</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-1" role="listitem" tabindex="0" onclick="openLightbox('Portrait Realism')" onkeydown="if(event.key==='Enter')openLightbox('Portrait Realism')" aria-label="Portrait realism tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Portrait</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-2" role="listitem" tabindex="0" onclick="openLightbox('Fine Line')" onkeydown="if(event.key==='Enter')openLightbox('Fine Line')" aria-label="Fine line tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Fine Line</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-1" role="listitem" tabindex="0" onclick="openLightbox('Color Realism')" onkeydown="if(event.key==='Enter')openLightbox('Color Realism')" aria-label="Color realism tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Color Realism</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-2" role="listitem" tabindex="0" onclick="openLightbox('Minimalism')" onkeydown="if(event.key==='Enter')openLightbox('Minimalism')" aria-label="Minimalist tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Minimalism</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-3" role="listitem" tabindex="0" onclick="openLightbox('Illustration')" onkeydown="if(event.key==='Enter')openLightbox('Illustration')" aria-label="Illustration tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Illustration</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-2" role="listitem" tabindex="0" onclick="openLightbox('Geometric')" onkeydown="if(event.key==='Enter')openLightbox('Geometric')" aria-label="Geometric tattoo">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Geometric</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-        <div class="gallery-item reveal reveal-delay-3" role="listitem" tabindex="0" onclick="openLightbox('Piercing')" onkeydown="if(event.key==='Enter')openLightbox('Piercing')" aria-label="Piercing work">
-          <div class="gallery-placeholder">
-            <svg class="gallery-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2 1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <span class="gallery-label">Piercing</span>
-          </div>
-          <div class="gallery-overlay"><span class="gallery-overlay-text">View Work</span></div>
-        </div>
-      </div>
-
-      <div style="text-align:center; margin-top:3rem;" class="reveal">
-        <a href="https://www.instagram.com/eyal_vain" target="_blank" rel="noopener noreferrer" class="btn btn-outline">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-          See More on Instagram
+      <div style="text-align:center;margin-top:2.5rem" class="rv">
+        <a href="https://www.instagram.com/eyal_vain" target="_blank" rel="noopener noreferrer" class="btn btn-out">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          עוד עבודות באינסטגרם
         </a>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ─── PROCESS ───────────────────────────────────────────────── -->
-  <section id="process" aria-labelledby="process-title">
-    <div class="container">
-      <div class="process-header">
-        <p class="section-label reveal">How It Works</p>
-        <h2 id="process-title" class="reveal reveal-delay-1">The Process</h2>
+<!-- ── PROCESS ────────────────────────────────────────────────────── -->
+<section id="process" aria-labelledby="process-h">
+  <div class="container">
+    <div class="proc-hd">
+      <p class="tag rv">איך זה עובד</p>
+      <h2 id="process-h" class="rv d1">התהליך</h2>
+    </div>
+    <div class="proc-steps" role="list">
+      <div class="proc-step rv d1" role="listitem">
+        <div class="step-n" aria-hidden="true">01</div>
+        <h4>ייעוץ</h4>
+        <p>נדון ברעיון, במיקום, בגודל ובסגנון. כל פרט מסונכרן לפני שטיפת דיו אחת.</p>
       </div>
-      <div class="process-steps" role="list">
-        <div class="process-step reveal reveal-delay-1" role="listitem">
-          <div class="step-num" aria-hidden="true">01</div>
-          <h4>Consultation</h4>
-          <p>We discuss your idea, placement, size, and style. Every detail is aligned before a single drop of ink.</p>
-        </div>
-        <div class="process-step reveal reveal-delay-2" role="listitem">
-          <div class="step-num" aria-hidden="true">02</div>
-          <h4>Custom Design</h4>
-          <p>Eyal creates a bespoke design based on your concept. Revisions are welcome until it's exactly right.</p>
-        </div>
-        <div class="process-step reveal reveal-delay-3" role="listitem">
-          <div class="step-num" aria-hidden="true">03</div>
-          <h4>The Session</h4>
-          <p>Precise, professional execution in a clean, private studio environment designed for your comfort.</p>
-        </div>
-        <div class="process-step reveal reveal-delay-4" role="listitem">
-          <div class="step-num" aria-hidden="true">04</div>
-          <h4>Aftercare</h4>
-          <p>Full aftercare guidance provided. We ensure your tattoo heals beautifully and stays vibrant.</p>
-        </div>
+      <div class="proc-step rv d2" role="listitem">
+        <div class="step-n" aria-hidden="true">02</div>
+        <h4>עיצוב מותאם</h4>
+        <p>איל יוצר עיצוב ייחודי על בסיס הרעיון שלך. תיקונים תמיד ברוכים עד שהכל מושלם.</p>
+      </div>
+      <div class="proc-step rv d3" role="listitem">
+        <div class="step-n" aria-hidden="true">03</div>
+        <h4>הסשן</h4>
+        <p>ביצוע מדויק ומקצועי בסביבת סטודיו נקייה ופרטית המיועדת לנוחותך.</p>
+      </div>
+      <div class="proc-step rv d4" role="listitem">
+        <div class="step-n" aria-hidden="true">04</div>
+        <h4>טיפול לאחר</h4>
+        <p>הנחיות טיפול מקיפות ניתנות לאחר הסשן. נדאג שהקעקוע שלך יתרפא בצורה מושלמת.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ─── BOOKING CTA ───────────────────────────────────────────── -->
-  <section id="booking" aria-labelledby="booking-title">
-    <div class="booking-orb" aria-hidden="true"></div>
-    <div class="container">
-      <div class="booking-content">
-        <p class="section-label reveal" style="justify-content:center;">Ready?</p>
-        <div class="booking-big-text reveal reveal-delay-1">
-          <span class="line1" id="booking-title">MAKE YOUR</span>
-          <span class="line2">MARK.</span>
-        </div>
-        <p class="booking-sub reveal reveal-delay-2">
-          Limited slots available each month. Reach out to start planning your custom piece — tattoo or piercing.
-        </p>
-        <div class="booking-actions reveal reveal-delay-3">
-          <a href="https://wa.me/972000000000" target="_blank" rel="noopener noreferrer" class="btn btn-gold">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-            WhatsApp Us
-          </a>
-          <a href="mailto:vaintattoo@gmail.com" class="btn btn-outline">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
-            Send an Email
-          </a>
-        </div>
+<!-- ── BOOKING ────────────────────────────────────────────────────── -->
+<section id="booking" aria-labelledby="booking-h">
+  <div class="bk-orb" aria-hidden="true"></div>
+  <div class="bk-ring" aria-hidden="true"></div>
+  <div class="bk-ring2" aria-hidden="true"></div>
+  <div class="container">
+    <div class="bk-content">
+      <p class="tag rv" style="justify-content:center">מוכן?</p>
+      <div class="bk-big rv d1">
+        <span class="l1" id="booking-h">הטבע את</span>
+        <span class="l2">חותמך.</span>
+      </div>
+      <p class="bk-sub rv d2">
+        מספר מקומות מוגבל בכל חודש. צור קשר כדי לתכנן את היצירה המותאמת שלך — קעקוע או פירסינג.
+      </p>
+      <div class="bk-acts rv d3">
+        <a href="https://wa.me/972000000000" target="_blank" rel="noopener noreferrer" class="btn btn-gold">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          WhatsApp
+        </a>
+        <a href="mailto:vaintattoo@gmail.com" class="btn btn-out">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+          שלח אימייל
+        </a>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ─── CONTACT ───────────────────────────────────────────────── -->
-  <section id="contact" aria-labelledby="contact-title">
-    <div class="container">
-      <div class="contact-grid">
+<!-- ── CONTACT ────────────────────────────────────────────────────── -->
+<section id="contact" aria-labelledby="contact-h">
+  <div class="container">
+    <div class="ct-grid">
 
-        <!-- Left: Info -->
-        <div class="contact-left">
-          <p class="section-label reveal">Get In Touch</p>
-          <h2 id="contact-title" class="reveal reveal-delay-1">
-            Visit the<br /><span class="gold">Studio.</span>
-          </h2>
-          <p class="reveal reveal-delay-2">
-            Drop by, call, or send a message. We're here to answer any question about tattoos, piercings, pricing, or aftercare.
-          </p>
-
-          <div class="contact-info reveal reveal-delay-2">
-            <div class="contact-info-item">
-              <div class="contact-info-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z"/></svg>
-              </div>
-              <div class="contact-info-text">
-                <strong>Address</strong>
-                <span>Sokolov 58, Herzliya, Israel</span>
-              </div>
+      <!-- Info (RTL: right) -->
+      <div class="ct-l">
+        <p class="tag rv">צור קשר</p>
+        <h2 id="contact-h" class="rv d1">בקר<br><span class="gold">בסטודיו.</span></h2>
+        <p class="rv d2">כנס, התקשר, או שלח הודעה. אנחנו כאן לענות על כל שאלה על קעקועים, פירסינג, מחירים וטיפול.</p>
+        <div class="ct-info rv d2">
+          <div class="ct-row">
+            <div class="ct-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z"/></svg>
             </div>
-            <div class="contact-info-item">
-              <div class="contact-info-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 6v.75z"/></svg>
-              </div>
-              <div class="contact-info-text">
-                <strong>Phone / WhatsApp</strong>
-                <span>+972 — — —</span>
-              </div>
-            </div>
-            <div class="contact-info-item">
-              <div class="contact-info-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
-              </div>
-              <div class="contact-info-text">
-                <strong>Hours</strong>
-                <span>Sun–Thu: 10:00 – 20:00<br />Fri: 10:00 – 14:00</span>
-              </div>
-            </div>
-            <div class="contact-info-item">
-              <div class="contact-info-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
-              </div>
-              <div class="contact-info-text">
-                <strong>Email</strong>
-                <span>vaintattoo@gmail.com</span>
-              </div>
-            </div>
+            <div class="ct-txt"><strong>כתובת</strong><span>סוקולוב 58, הרצליה, ישראל</span></div>
           </div>
-
-          <div class="social-links reveal reveal-delay-3" aria-label="Social media">
-            <a href="https://www.instagram.com/eyal_vain" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="Instagram">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-            </a>
-            <a href="#" class="social-link" aria-label="TikTok">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-            </a>
-            <a href="#" class="social-link" aria-label="Facebook">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            </a>
+          <div class="ct-row">
+            <div class="ct-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 6v.75z"/></svg>
+            </div>
+            <div class="ct-txt"><strong>טלפון / WhatsApp</strong><span>+972 — — —</span></div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+            </div>
+            <div class="ct-txt"><strong>שעות פתיחה</strong><span>א׳–ה׳: 10:00–20:00<br>ו׳: 10:00–14:00</span></div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+            </div>
+            <div class="ct-txt"><strong>אימייל</strong><span>vaintattoo@gmail.com</span></div>
           </div>
         </div>
-
-        <!-- Right: Form -->
-        <div class="contact-right reveal reveal-delay-2">
-          <form onsubmit="handleFormSubmit(event)" novalidate aria-label="Booking inquiry form">
-            <div class="contact-form-row">
-              <div class="contact-form-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" name="name" placeholder="Your name" required autocomplete="name" />
-              </div>
-              <div class="contact-form-group">
-                <label for="phone">Phone</label>
-                <input type="tel" id="phone" name="phone" placeholder="+972 000 000 000" autocomplete="tel" />
-              </div>
-            </div>
-            <div class="contact-form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email" />
-            </div>
-            <div class="contact-form-group">
-              <label for="service">Service</label>
-              <select id="service" name="service" required>
-                <option value="" disabled selected>Select a service</option>
-                <option value="tattoo">Custom Tattoo</option>
-                <option value="piercing">Piercing</option>
-                <option value="touchup">Touch-Up / Cover-Up</option>
-                <option value="consult">Consultation</option>
-              </select>
-            </div>
-            <div class="contact-form-group">
-              <label for="message">Tell Us About Your Idea</label>
-              <textarea id="message" name="message" placeholder="Describe your tattoo idea, placement, size, or any questions you have..." rows="4"></textarea>
-            </div>
-            <button type="submit" class="btn btn-gold form-submit">
-              Send Request
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
-            </button>
-            <div id="form-success" role="alert" aria-live="polite" style="display:none; margin-top:1rem; padding:1rem; border:1px solid rgba(201,168,76,0.3); background:rgba(201,168,76,0.06); color:var(--gold); font-size:13px; letter-spacing:0.05em; border-radius:2px; text-align:center;">
-              Message sent! We'll get back to you within 24 hours.
-            </div>
-          </form>
+        <div class="socials rv d3" aria-label="רשתות חברתיות">
+          <a href="https://www.instagram.com/eyal_vain" target="_blank" rel="noopener noreferrer" class="soc" aria-label="אינסטגרם">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </a>
+          <a href="#" class="soc" aria-label="טיקטוק">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+          </a>
+          <a href="#" class="soc" aria-label="פייסבוק">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
         </div>
-
       </div>
-    </div>
 
-    <!-- Footer -->
-    <footer>
-      <div class="container footer-inner">
-        <div class="footer-logo">VAIN<span>.</span></div>
-        <p class="footer-copy">Tattoo &amp; Piercing Studio · Herzliya, Israel</p>
-        <p class="footer-rights">&copy; 2024 Vain Tattoo. All rights reserved.</p>
+      <!-- Form (RTL: left) -->
+      <div class="ct-r rv d2">
+        <form onsubmit="submitForm(event)" novalidate aria-label="טופס פנייה">
+          <div class="fg-row">
+            <div class="fg">
+              <label for="nm">שם מלא</label>
+              <input type="text" id="nm" name="name" placeholder="השם שלך" required autocomplete="name"/>
+            </div>
+            <div class="fg">
+              <label for="ph">טלפון</label>
+              <input type="tel" id="ph" name="phone" placeholder="05X-XXXXXXX" autocomplete="tel"/>
+            </div>
+          </div>
+          <div class="fg">
+            <label for="em">אימייל</label>
+            <input type="email" id="em" name="email" placeholder="your@email.com" required autocomplete="email"/>
+          </div>
+          <div class="fg">
+            <label for="sv">שירות</label>
+            <select id="sv" name="service" required>
+              <option value="" disabled selected>בחר שירות</option>
+              <option value="tattoo">קעקוע מותאם אישית</option>
+              <option value="piercing">פירסינג</option>
+              <option value="touchup">תיקון / כיסוי</option>
+              <option value="consult">ייעוץ</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label for="msg">ספר לנו על הרעיון שלך</label>
+            <textarea id="msg" name="message" rows="4" placeholder="תאר את רעיון הקעקוע, מיקום, גודל, או כל שאלה..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-gold f-submit">
+            שלח פנייה
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
+          </button>
+          <div class="f-ok" id="fOk" role="alert" aria-live="polite">
+            ההודעה נשלחה! נחזור אליך תוך 24 שעות.
+          </div>
+        </form>
       </div>
-    </footer>
-  </section>
 
-  <!-- ─── LIGHTBOX ──────────────────────────────────────────────── -->
-  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
-    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close image viewer">&times;</button>
-    <div class="lightbox-content">
-      <div class="lightbox-placeholder" id="lightboxPlaceholder">
-        <span style="font-family:var(--font-head);font-size:0.75rem;letter-spacing:0.3em;color:var(--gold-dim)">YOUR PHOTO HERE</span>
-      </div>
-      <p class="lightbox-caption" id="lightboxCaption"></p>
     </div>
   </div>
 
-  <!-- ─── SCRIPTS ───────────────────────────────────────────────── -->
-  <script>
-    // Nav scroll state
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-      navbar.classList.toggle('scrolled', window.scrollY > 60);
-    }, { passive: true });
+  <footer>
+    <div class="container ft-in">
+      <div class="ft-logo">VAIN<span>.</span></div>
+      <p class="ft-copy">סטודיו לקעקועים ופירסינג · הרצליה, ישראל</p>
+      <p class="ft-r">&copy; 2024 Vain Tattoo. כל הזכויות שמורות.</p>
+    </div>
+  </footer>
+</section>
 
-    // Hamburger menu
-    const hamburger = document.getElementById('hamburger');
-    const mobileNav = document.getElementById('mobileNav');
-    hamburger.addEventListener('click', () => {
-      mobileNav.classList.add('open');
-      hamburger.setAttribute('aria-expanded', 'true');
-      document.body.style.overflow = 'hidden';
-    });
-    function closeMobileNav() {
-      mobileNav.classList.remove('open');
-      hamburger.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
-    }
-    document.getElementById('mobileClose').addEventListener('click', closeMobileNav);
-    mobileNav.addEventListener('click', (e) => {
-      if (e.target === mobileNav) closeMobileNav();
-    });
+<!-- ── LIGHTBOX ───────────────────────────────────────────────────── -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="מציג תמונות">
+  <button class="lb-x" onclick="closeLb()" aria-label="סגור">&times;</button>
+  <div class="lb-body">
+    <div class="lb-ph">תמונה תוצג כאן</div>
+    <p class="lb-cap" id="lbCap"></p>
+  </div>
+</div>
 
-    // Scroll reveal
-    const revealEls = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    revealEls.forEach(el => observer.observe(el));
-
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-      a.addEventListener('click', (e) => {
-        const id = a.getAttribute('href').slice(1);
-        const target = document.getElementById(id);
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
+<!-- ── SCRIPTS ────────────────────────────────────────────────────── -->
+<script>
+  /* ── Custom Cursor ─────────────────────────────────── */
+  const cur = document.getElementById('cursor');
+  let mx=0,my=0,cx=0,cy=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+  (function loop(){
+    cx+=(mx-cx)*.15; cy+=(my-cy)*.15;
+    cur.style.left=cx+'px'; cur.style.top=cy+'px';
+    requestAnimationFrame(loop);
+  })();
+  document.querySelectorAll('a,button,[data-tilt],.sp-tag,.gal-item,.soc')
+    .forEach(el=>{
+      el.addEventListener('mouseenter',()=>cur.classList.add('big'));
+      el.addEventListener('mouseleave',()=>cur.classList.remove('big'));
     });
 
-    // Lightbox
-    function openLightbox(title) {
-      const lb = document.getElementById('lightbox');
-      document.getElementById('lightboxCaption').textContent = title;
-      lb.classList.add('open');
-      document.body.style.overflow = 'hidden';
-      lb.querySelector('.lightbox-close').focus();
-    }
-    function closeLightbox() {
-      document.getElementById('lightbox').classList.remove('open');
-      document.body.style.overflow = '';
-    }
-    document.getElementById('lightbox').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('lightbox')) closeLightbox();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLightbox();
-    });
+  /* ── Nav ───────────────────────────────────────────── */
+  const nav=document.getElementById('nav');
+  window.addEventListener('scroll',()=>nav.classList.toggle('sc',scrollY>60),{passive:true});
 
-    // Form submit (demo)
-    function handleFormSubmit(e) {
-      e.preventDefault();
-      const btn = e.target.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
-      setTimeout(() => {
-        document.getElementById('form-success').style.display = 'block';
-        e.target.reset();
-        btn.disabled = false;
-        btn.innerHTML = 'Send Request <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>';
-      }, 1000);
-    }
-  </script>
+  /* ── Mobile nav ────────────────────────────────────── */
+  const ham=document.getElementById('ham'),mnav=document.getElementById('mnav');
+  ham.addEventListener('click',()=>{mnav.classList.add('open');ham.setAttribute('aria-expanded','true');document.body.style.overflow='hidden'});
+  function closeMnav(){mnav.classList.remove('open');ham.setAttribute('aria-expanded','false');document.body.style.overflow=''}
+  document.getElementById('mnavX').addEventListener('click',closeMnav);
 
+  /* ── Smooth scroll ─────────────────────────────────── */
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const t=document.getElementById(a.getAttribute('href').slice(1));
+      if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})}
+    });
+  });
+
+  /* ── Scroll Reveal ─────────────────────────────────── */
+  const rvObs=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add('on');rvObs.unobserve(en.target)}});
+  },{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.rv').forEach(el=>rvObs.observe(el));
+
+  /* ── Count-up ──────────────────────────────────────── */
+  const countObs=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      const el=en.target, target=+el.dataset.target, suffix=el.nextSibling?.textContent?.includes('%')?'':'';
+      let start=0; const dur=1800;
+      const step=ts=>{
+        if(!start) start=ts;
+        const prog=Math.min((ts-start)/dur,1);
+        el.textContent=Math.floor(prog*target)+(target===100?'+':'+'[0]);
+        if(prog<1) requestAnimationFrame(step); else el.textContent=target+(target===100?'%':'+');
+      };
+      requestAnimationFrame(step);
+      countObs.unobserve(el);
+    });
+  },{threshold:.5});
+  document.querySelectorAll('.count-up').forEach(el=>countObs.observe(el));
+
+  /* ── SVG Path Draw ─────────────────────────────────── */
+  document.querySelectorAll('.dp').forEach(path=>{
+    const len=path.getTotalLength();
+    path.style.strokeDasharray=len;
+    path.style.strokeDashoffset=len;
+  });
+  const dpObs=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        en.target.querySelectorAll('.dp').forEach(p=>{p.style.strokeDashoffset=0});
+      }
+    });
+  },{threshold:.2});
+  document.querySelectorAll('.deco-svg').forEach(s=>dpObs.observe(s));
+
+  /* ── 3D Tilt ───────────────────────────────────────── */
+  document.querySelectorAll('[data-tilt]').forEach(card=>{
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-.5;
+      const y=(e.clientY-r.top)/r.height-.5;
+      card.style.transform=`perspective(600px) rotateY(${x*10}deg) rotateX(${-y*10}deg)`;
+    });
+    card.addEventListener('mouseleave',()=>{card.style.transform='perspective(600px) rotateY(0) rotateX(0)'});
+  });
+
+  /* ── Horizontal Gallery Drag ───────────────────────── */
+  const gs=document.getElementById('galScroll');
+  let isDown=false,startX,scrollL;
+  gs.addEventListener('mousedown',e=>{isDown=true;gs.classList.add('active');startX=e.pageX-gs.offsetLeft;scrollL=gs.scrollLeft});
+  gs.addEventListener('mouseleave',()=>{isDown=false});
+  gs.addEventListener('mouseup',()=>{isDown=false});
+  gs.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();const x=e.pageX-gs.offsetLeft;gs.scrollLeft=scrollL-(x-startX)*1.5});
+
+  /* ── Lightbox ──────────────────────────────────────── */
+  function openLb(title){
+    document.getElementById('lbCap').textContent=title;
+    document.getElementById('lb').classList.add('open');
+    document.body.style.overflow='hidden';
+  }
+  function closeLb(){document.getElementById('lb').classList.remove('open');document.body.style.overflow=''}
+  document.getElementById('lb').addEventListener('click',e=>{if(e.target===document.getElementById('lb'))closeLb()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb()});
+
+  /* ── Form ──────────────────────────────────────────── */
+  function submitForm(e){
+    e.preventDefault();
+    const btn=e.target.querySelector('button[type="submit"]');
+    btn.disabled=true; btn.textContent='שולח...';
+    setTimeout(()=>{
+      document.getElementById('fOk').style.display='block';
+      e.target.reset(); btn.disabled=false;
+      btn.innerHTML='שלח פנייה <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>';
+    },1000);
+  }
+</script>
 </body>
 </html>
