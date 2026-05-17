@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Frank_Ruhl_Libre, Heebo } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const frankRuhl = Frank_Ruhl_Libre({
+  variable: "--font-frank-ruhl",
+  subsets: ["hebrew", "latin"],
+  weight: ["300", "400", "500", "700", "900"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const heebo = Heebo({
+  variable: "--font-heebo",
+  subsets: ["hebrew", "latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Studio Vain — Tattoo & Piercing | Tel Aviv",
-  description: "Premium tattoo and piercing studio in Tel Aviv. Custom designs, fine line, blackwork, Japanese, and more.",
+  title: "Studio Vain — עיצוב דיגיטלי פרימיום",
+  description: "סוכנות עיצוב דיגיטלי פרימיום. יוצרים חוויות ויזואליות שעוצרות גלילה, מעוררות רגש, ומניעות לפעולה.",
 };
 
 export default function RootLayout({
@@ -24,8 +26,9 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="he"
+      dir="rtl"
+      className={`${frankRuhl.variable} ${heebo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
