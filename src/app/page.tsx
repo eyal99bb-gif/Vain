@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "motion/react";
+import Link from "next/link";
 import { useRef, useState } from "react";
 
 // ─── EARRING SVGs ────────────────────────────────────────────────────────────
@@ -379,6 +380,12 @@ export default function Home() {
               {label}
             </motion.a>
           ))}
+          <Link
+            href="/try-on"
+            className="text-[#e8b64a] hover:text-[#f5d283] transition-colors duration-200 cursor-pointer"
+          >
+            Try-On עגילים
+          </Link>
         </div>
 
         <motion.a
