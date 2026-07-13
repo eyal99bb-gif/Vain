@@ -78,19 +78,26 @@ def fetch_prices(ticker: str, years: int) -> pd.DataFrame:
     raise RuntimeError("all data sources failed: " + "; ".join(errors))
 
 
-def synthetic_prices(years: int, seed: int = 7) -> pd.DataFrame:
+def synthetic_prices(years: int, seed: int = 7,
+                     profile: str = "equity") -> pd.DataFrame:
     """Regime-switching GBM stand-in for when market data is unreachable.
 
     SYNTHETIC — results on this series demonstrate the machinery, not any
     real asset's performance. Callers must label output accordingly.
+    profile='crypto' calibrates regimes to coin-like drift/vol (~3-4x equity).
     """
     rng = np.random.default_rng(seed)
     n = int(years * 252)
-    # daily drift/vol per hidden regime: bull, bear, sideways
-    mu = {BULL: 0.12 / 252, BEAR: -0.25 / 252, SIDEWAYS: 0.02 / 252}
-    sig = {BULL: 0.12 / 16, BEAR: 0.28 / 16, SIDEWAYS: 0.14 / 16}
-    # sticky hidden chain: mean regime length ~4-6 months
-    stay = {BULL: 0.992, BEAR: 0.985, SIDEWAYS: 0.990}
+    if profile == "crypto":
+        mu = {BULL: 1.20 / 252, BEAR: -0.90 / 252, SIDEWAYS: 0.0}
+        sig = {BULL: 0.55 / 16, BEAR: 0.85 / 16, SIDEWAYS: 0.45 / 16}
+        stay = {BULL: 0.990, BEAR: 0.982, SIDEWAYS: 0.988}
+    else:
+        # daily drift/vol per hidden regime: bull, bear, sideways
+        mu = {BULL: 0.12 / 252, BEAR: -0.25 / 252, SIDEWAYS: 0.02 / 252}
+        sig = {BULL: 0.12 / 16, BEAR: 0.28 / 16, SIDEWAYS: 0.14 / 16}
+        # sticky hidden chain: mean regime length ~4-6 months
+        stay = {BULL: 0.992, BEAR: 0.985, SIDEWAYS: 0.990}
     state, states = BULL, []
     for _ in range(n):
         if rng.random() > stay[state]:
@@ -223,13 +230,16 @@ def fmt_matrix(mat: np.ndarray, title: str) -> str:
 def walk_forward(close: pd.Series, states: pd.Series, *, stride: int,
                  mode: str = "standalone", cap: float = 1.0,
                  threshold: float = 0.10, signal_ref: float = 0.5,
+                 min_signal: float = 0.0,
                  warmup: int = 756, cost_bps: float = 2.0,
                  legacy_overlap: bool = False,
                  base_strategy=None) -> dict:
     """Walk-forward backtest: the matrix is refit every `stride` bars using
     ONLY data seen so far (never the bars being traded).
 
-    STANDALONE: position = clip(signal / signal_ref, -1, 1) * cap.
+    STANDALONE: position = clip(signal / signal_ref, -1, 1) * cap; with
+    min_signal > 0 the position is 0 unless |signal| >= min_signal (the
+    conviction gate: trade less, only when the matrix actually leans).
     FILTER: base strategy position (default: always long 1.0) allowed long
     only when signal > threshold, short only when signal < -threshold,
     flat otherwise.
@@ -251,7 +261,10 @@ def walk_forward(close: pd.Series, states: pd.Series, *, stride: int,
             continue
         sig = signal_from(mat, int(s[t]))
         if mode == "standalone":
-            pos[t] = float(np.clip(sig / signal_ref, -1, 1)) * cap
+            if abs(sig) < min_signal:
+                pos[t] = 0.0
+            else:
+                pos[t] = float(np.clip(sig / signal_ref, -1, 1)) * cap
         else:  # filter
             base = base_strategy(t) if base_strategy else 1.0
             if sig > threshold:
@@ -313,8 +326,12 @@ def main():
     src.add_argument("--ticker")
     src.add_argument("--synthetic", action="store_true")
     ap.add_argument("--years", type=int, default=10)
+    ap.add_argument("--profile", choices=["equity", "crypto"], default="equity",
+                    help="synthetic-data calibration only")
     ap.add_argument("--mode", choices=["standalone", "filter"], default="standalone")
     ap.add_argument("--cap", type=float, default=1.0)
+    ap.add_argument("--min-signal", type=float, default=0.0,
+                    help="standalone conviction gate: flat when |signal| below this")
     ap.add_argument("--threshold", type=float, default=0.10)
     ap.add_argument("--window", type=int, default=20)
     ap.add_argument("--bull", type=float, default=0.05)
@@ -330,7 +347,7 @@ def main():
     elif args.ticker:
         df = fetch_prices(args.ticker, args.years)
     else:
-        df = synthetic_prices(args.years)
+        df = synthetic_prices(args.years, profile=args.profile)
         print("=" * 68)
         print("SYNTHETIC DATA — regime-switching simulation, NOT a real asset.")
         print("Numbers below demonstrate the machinery only.")
@@ -399,7 +416,7 @@ def main():
 
     # walk-forward, before-fix vs after-fix
     kw = dict(stride=args.window, mode=args.mode, cap=args.cap,
-              threshold=args.threshold)
+              threshold=args.threshold, min_signal=args.min_signal)
     fixed = walk_forward(close, states, **kw)
     broken = walk_forward(close, states, legacy_overlap=True, **kw)
     print(f"\nWalk-forward backtest ({args.mode.upper()} mode, cap {args.cap:g}x, "

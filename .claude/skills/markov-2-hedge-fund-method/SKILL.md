@@ -60,6 +60,18 @@ Requires: numpy, pandas, matplotlib (hmmlearn for `--hmm`, scikit-learn for
    **This user's saved default: STANDALONE, cap 1.0×, price-only states**
    (chosen at onboarding 2026-07-13). Confirm before switching.
 
+## Crypto / high-volatility assets
+
+Coins run ~3-4x equity volatility: widen the state thresholds (about
+±10% for a 20-day window) or the labels saturate at BULL/BEAR and carry no
+information. `--min-signal X` adds a conviction gate in STANDALONE mode
+(flat unless |signal| ≥ X) — the honest way to chase win rate is trading
+less, not tuning more. `--profile crypto` calibrates the synthetic
+fallback to coin-like dynamics. Known trap (observed 2026-07-13): gating
+and shorter windows improved the FLAWED overlapping backtest while
+worsening the honest stride one — if a tweak only helps the before-fix
+column, it is fitting the autocorrelation artifact, not the market.
+
 ## Optional richer states (offer, don't force)
 
 `--enhanced` clusters on 20-day return + ATR + relative volume so "bear and
