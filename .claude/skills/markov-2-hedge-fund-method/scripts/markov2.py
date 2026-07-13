@@ -231,7 +231,7 @@ def walk_forward(close: pd.Series, states: pd.Series, *, stride: int,
                  mode: str = "standalone", cap: float = 1.0,
                  threshold: float = 0.10, signal_ref: float = 0.5,
                  min_signal: float = 0.0,
-                 warmup: int = 756, cost_bps: float = 2.0,
+                 warmup: int = 756, cost_bps: float = 2.0, ppy: int = 252,
                  legacy_overlap: bool = False,
                  base_strategy=None) -> dict:
     """Walk-forward backtest: the matrix is refit every `stride` bars using
@@ -280,7 +280,7 @@ def walk_forward(close: pd.Series, states: pd.Series, *, stride: int,
     peak = np.maximum.accumulate(equity)
     active = strat[pos[warmup:-1] != 0]
     gains, losses = active[active > 0].sum(), -active[active < 0].sum()
-    yrs = len(strat) / 252
+    yrs = len(strat) / ppy
     return {
         "index": close.index[warmup + 1:],
         "equity": equity,
@@ -289,7 +289,7 @@ def walk_forward(close: pd.Series, states: pd.Series, *, stride: int,
         "profit_factor": float(gains / losses) if losses > 0 else float("inf"),
         "max_drawdown": float((equity / peak - 1).min()),
         "cagr": float(equity[-1] ** (1 / yrs) - 1),
-        "sharpe": float(strat.mean() / strat.std() * np.sqrt(252)) if strat.std() else 0.0,
+        "sharpe": float(strat.mean() / strat.std() * np.sqrt(ppy)) if strat.std() else 0.0,
         "exposure": float((pos[warmup:-1] != 0).mean()),
     }
 
@@ -333,6 +333,10 @@ def main():
     ap.add_argument("--min-signal", type=float, default=0.0,
                     help="standalone conviction gate: flat when |signal| below this")
     ap.add_argument("--threshold", type=float, default=0.10)
+    ap.add_argument("--warmup", type=int, default=756,
+                    help="bars reserved for the initial matrix fit")
+    ap.add_argument("--ppy", type=int, default=252,
+                    help="bars per year for annualization (12 for monthly data)")
     ap.add_argument("--window", type=int, default=20)
     ap.add_argument("--bull", type=float, default=0.05)
     ap.add_argument("--bear", type=float, default=-0.05)
@@ -416,7 +420,8 @@ def main():
 
     # walk-forward, before-fix vs after-fix
     kw = dict(stride=args.window, mode=args.mode, cap=args.cap,
-              threshold=args.threshold, min_signal=args.min_signal)
+              threshold=args.threshold, min_signal=args.min_signal,
+              warmup=args.warmup, ppy=args.ppy)
     fixed = walk_forward(close, states, **kw)
     broken = walk_forward(close, states, legacy_overlap=True, **kw)
     print(f"\nWalk-forward backtest ({args.mode.upper()} mode, cap {args.cap:g}x, "
