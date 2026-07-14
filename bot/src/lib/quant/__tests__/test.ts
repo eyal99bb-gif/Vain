@@ -17,6 +17,7 @@ import { wilson } from "../probability";
 import { kellyFraction } from "../risk";
 import { EXIT, exitState } from "../exits";
 import { compareExitStyles } from "../tradeBacktest";
+import { hmacSign, longOnlyTarget, rebalanceDelta, roundStep, TESTNET_BASE } from "../testnet";
 import { resample } from "../resample";
 import { walkForward } from "../backtest";
 
@@ -205,6 +206,21 @@ const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
   const rows2 = compareExitStyles(series.candles, cfg);
   assert(JSON.stringify(rows) === JSON.stringify(rows2), "trade backtest is deterministic");
   assert(EXIT.PARTIAL_FRAC > 0 && EXIT.PARTIAL_FRAC < 1, "partial fraction sane");
+}
+
+// ── 11. Testnet trading helpers ─────────────────────────────────────────────
+{
+  assert(TESTNET_BASE === "https://testnet.binance.vision",
+    "execution endpoint is hard-coded to the TESTNET");
+  assert(roundStep(0.123456, 0.001) === 0.123, "quantity rounds DOWN to lot step");
+  assert(roundStep(1.9999999, 0.01) <= 2.0, "rounding never rounds up past the value");
+  assert(longOnlyTarget(1, 0.4) === 0.4 && longOnlyTarget(-1, 0.4) === 0 && longOnlyTarget(0, 0.4) === 0,
+    "spot is long-only: short/flat signals target 0");
+  assert(rebalanceDelta(0.4, 0.38) === 0, "small drift inside the band does not trade");
+  assert(close(rebalanceDelta(0.4, 0.2), 0.2, 1e-12), "large drift trades the difference");
+  const sig = hmacSign("secret", "a=1&b=2");
+  assert(sig.length === 64 && sig === hmacSign("secret", "a=1&b=2"),
+    "HMAC signature is deterministic 64-hex");
 }
 
 console.log(`\nAll ${passed} checks passed.`);

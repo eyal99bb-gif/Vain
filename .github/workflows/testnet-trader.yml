@@ -1,0 +1,53 @@
+name: Testnet auto-trader
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: testnet-trader
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+
+      - run: npm ci
+
+      - name: Trade on the Binance SPOT TESTNET (fake money only)
+        env:
+          BINANCE_TESTNET_KEY: ${{ secrets.BINANCE_TESTNET_KEY }}
+          BINANCE_TESTNET_SECRET: ${{ secrets.BINANCE_TESTNET_SECRET }}
+        run: npx tsx scripts/testnet-trader.mts
+
+      - name: Post executed orders to the journal issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count=$(jq length actions.json)
+          if [ "$count" -eq 0 ]; then echo "no orders"; exit 0; fi
+          title="📒 יומן מסחר Testnet"
+          num=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "📒 in:title" --json number --jq '.[0].number')
+          if [ -z "$num" ]; then
+            url=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+              --body "@eyal99bb-gif כאן הבוט מתעד כל פעולה אוטומטית ב-Testnet (כסף מדומה בלבד). כל תגובה חדשה = פעולה שבוצעה.")
+            num=$(basename "$url")
+          fi
+          body=$(jq -r '.[].line' actions.json)
+          gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "$body"
