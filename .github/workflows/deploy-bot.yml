@@ -1,0 +1,47 @@
+name: Deploy trading bot to GitHub Pages
+
+on:
+  push:
+    branches: [claude/markov-2-hedge-fund-install-eiej5t]
+    paths:
+      - "bot/**"
+      - ".github/workflows/deploy-bot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+
+      - run: npm ci
+
+      - name: Quant engine tests (gate the deploy)
+        run: npm run test:quant
+
+      - name: Build static export
+        run: npm run build
+
+      - run: touch out/.nojekyll
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./bot/out
