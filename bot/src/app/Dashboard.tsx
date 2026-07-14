@@ -51,18 +51,25 @@ export default function TradingDashboard() {
 
   useEffect(() => {
     let alive = true;
-    fetchSeries(assetId, interval)
-      .then((data: PriceSeries) => {
-        if (alive) setSeries(data);
-      })
-      .catch((e) => {
-        if (alive) setFetchError(String(e));
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+    const load = () =>
+      fetchSeries(assetId, interval)
+        .then((data: PriceSeries) => {
+          if (alive) {
+            setSeries(data);
+            setFetchError(null);
+          }
+        })
+        .catch((e) => {
+          if (alive) setFetchError(String(e));
+        })
+        .finally(() => {
+          if (alive) setLoading(false);
+        });
+    load();
+    const timer = setInterval(load, 60_000); // live auto-refresh every minute
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, [assetId, interval]);
 
@@ -165,7 +172,16 @@ export default function TradingDashboard() {
             </span>
           </span>
           <span>{series.candles.length} נרות</span>
-          <span>עודכן: {new Date(series.fetchedAt).toLocaleTimeString("he-IL")}</span>
+          <span>עדכון אחרון: {new Date(series.fetchedAt).toLocaleTimeString("he-IL")}</span>
+          {series.source !== "fixture" && (
+            <span className="flex items-center gap-1.5" style={{ color: C.long }}>
+              <span
+                className="inline-block w-2 h-2 rounded-full animate-pulse"
+                style={{ background: C.long }}
+              />
+              מתעדכן אוטומטית כל דקה
+            </span>
+          )}
         </div>
       )}
       {series?.source === "fixture" && (
@@ -187,7 +203,7 @@ export default function TradingDashboard() {
 
       {!loading && analysis && series && (
         <main className="flex flex-col gap-6">
-          <SignalCard a={analysis} />
+          <SignalCard a={analysis} series={series} />
           <PlanCard a={analysis} />
           <SubSignalsCard a={analysis} />
           <MatrixCard a={analysis} />
@@ -214,13 +230,24 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function SignalCard({ a }: { a: Analysis }) {
+function SignalCard({ a, series }: { a: Analysis; series: PriceSeries }) {
   const e = a.ensemble;
   const dirColor = e.direction > 0 ? C.long : e.direction < 0 ? C.short : C.flat;
   const dirText = e.direction > 0 ? "לונג ↑" : e.direction < 0 ? "שורט ↓" : "מחוץ לשוק —";
   const h = a.hitRate;
+  const n = series.candles.length;
+  const chg = n > 1 ? series.candles[n - 1].c / series.candles[n - 2].c - 1 : 0;
   return (
     <Card title="האות הנוכחי">
+      <div className="mb-4 flex items-baseline gap-3" dir="ltr" style={{ justifyContent: "flex-end" }}>
+        <span className="text-2xl font-bold text-white/90">
+          ${e.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+        </span>
+        <span className="text-sm font-semibold" style={{ color: chg >= 0 ? C.long : C.short }}>
+          {chg >= 0 ? "+" : ""}
+          {(chg * 100).toFixed(2)}%
+        </span>
+      </div>
       <div className="flex flex-wrap items-center gap-6">
         <div>
           <div className="text-4xl font-bold" style={{ color: dirColor }}>
