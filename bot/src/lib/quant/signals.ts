@@ -16,6 +16,8 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 
 /** momentum lookbacks (in bars) per interval — ~1/3/6/12 months */
 function momentumLookbacks(cfg: EngineConfig): number[] {
+  if (cfg.interval === "15m") return [16, 96, 288, 672]; // 4h, 1d, 3d, 1w
+  if (cfg.interval === "1h") return [24, 72, 168, 336]; // 1d, 3d, 1w, 2w
   if (cfg.interval === "1d") return [21, 63, 126, 252];
   if (cfg.interval === "1w") return [4, 13, 26, 52];
   return [1, 3, 6, 12];
@@ -23,9 +25,9 @@ function momentumLookbacks(cfg: EngineConfig): number[] {
 
 /** long trend SMA period per interval (~10 months, the classic timing filter) */
 function trendPeriod(cfg: EngineConfig): number {
-  if (cfg.interval === "1d") return 200;
+  if (cfg.interval === "1M") return 10;
   if (cfg.interval === "1w") return 40;
-  return 10;
+  return 200;
 }
 
 export function markovSignal(

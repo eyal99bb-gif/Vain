@@ -14,7 +14,7 @@ export interface Candle {
 }
 
 export type AssetKind = "crypto" | "stock";
-export type Interval = "1d" | "1w" | "1M";
+export type Interval = "15m" | "1h" | "1d" | "1w" | "1M";
 export type DataSource = "binance" | "coingecko" | "stooq" | "yahoo" | "fixture";
 
 export interface PriceSeries {

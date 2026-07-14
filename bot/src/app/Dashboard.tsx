@@ -24,6 +24,8 @@ const C = {
 };
 
 const INTERVALS: { id: Interval; label: string }[] = [
+  { id: "15m", label: "15 דק'" },
+  { id: "1h", label: "שעתי" },
   { id: "1d", label: "יומי" },
   { id: "1w", label: "שבועי" },
   { id: "1M", label: "חודשי" },
@@ -223,6 +225,18 @@ export default function TradingDashboard() {
           {strongOnly ? "🎯 אותות חזקים בלבד" : "🎯 סחור רק באותות חזקים"}
         </button>
       </div>
+
+      {(interval === "15m" || interval === "1h") && (
+        <div
+          className="rounded-lg p-3 mb-4 text-xs leading-relaxed"
+          style={{ background: "rgba(230,103,103,0.08)", border: "1px solid rgba(230,103,103,0.3)" }}
+        >
+          ⚠ <strong>מסחר תוך-יומי — זהירות כפולה:</strong> בטווחים קצרים הרעש גדל
+          והעמלות נאכלות מהר (יותר עסקאות = יותר עלויות). לפני שאתה מתייחס לאות
+          כאן, בדוק את שורת &quot;מבחן עמידות בעמלות כפולות&quot; — אם היתרון לא שורד שם,
+          הוא לא קיים. וההיסטוריה קצרה: 1000 נרות של 15 דק&apos; הם ~10 ימים בלבד.
+        </div>
+      )}
 
       {/* data source status */}
       {series && (

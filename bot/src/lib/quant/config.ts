@@ -27,11 +27,27 @@ export const ASSETS: AssetDef[] = [
  */
 export function configFor(kind: AssetKind, interval: Interval): EngineConfig {
   const crypto = kind === "crypto";
-  const ppy = interval === "1d" ? (crypto ? 365 : 252) : interval === "1w" ? 52 : 12;
-  const window = interval === "1d" ? 20 : interval === "1w" ? 4 : 1;
-  const bullThr = crypto ? 0.1 : 0.05;
-  // ~3 years of warmup, but never more than leaves too little to trade
-  const warmup = interval === "1d" ? 500 : interval === "1w" ? 120 : 36;
+  const PPY: Record<Interval, number> = {
+    "15m": crypto ? 35040 : 6552,
+    "1h": crypto ? 8760 : 1638,
+    "1d": crypto ? 365 : 252,
+    "1w": 52,
+    "1M": 12,
+  };
+  const ppy = PPY[interval];
+  const window = interval === "1w" ? 4 : interval === "1M" ? 1 : 20;
+  // state thresholds scale with the window's typical move length
+  const THR: Record<Interval, number> = {
+    "15m": crypto ? 0.015 : 0.008,
+    "1h": crypto ? 0.03 : 0.015,
+    "1d": crypto ? 0.1 : 0.05,
+    "1w": crypto ? 0.1 : 0.05,
+    "1M": crypto ? 0.1 : 0.05,
+  };
+  const bullThr = THR[interval];
+  // ~3 years of warmup on daily; half the series on shorter frames
+  const warmup =
+    interval === "1w" ? 120 : interval === "1M" ? 36 : 500;
   return {
     kind,
     interval,

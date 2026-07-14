@@ -122,6 +122,7 @@ export async function fetchSeries(assetId: string, interval: Interval): Promise<
     }
   }
   try {
+    if (interval === "15m" || interval === "1h") throw new Error("no intraday fallback");
     const candles = await fromCoinGecko(asset.id, interval);
     if (candles.length > 50)
       return {
