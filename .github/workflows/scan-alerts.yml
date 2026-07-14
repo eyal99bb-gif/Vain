@@ -1,0 +1,39 @@
+name: Scan signals and alert
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: signal-scan
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+
+      - run: npm ci
+
+      - name: Scan all assets
+        run: npx tsx scripts/scan.mts
+
+      - name: Open/close alert issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/manage-issues.sh
