@@ -1,3 +1,4 @@
+import { EXIT } from "./exits";
 import type { KellyResult } from "./risk";
 import type { EngineConfig, EnsembleResult, HitRate } from "./types";
 
@@ -73,6 +74,15 @@ export function buildActionPlan(
     steps.push({
       title: "סטופ-לוס — לא אופציונלי",
       detail: `${fmt(e.stop)} (2.5 ATR מהכניסה). מציבים את הפקודה מיד עם הכניסה. אם המחיר מגיע לשם — יוצאים, בלי ויכוח עם השוק. הפסד מקסימלי מתוכנן: ~${fmt(amount * 2.5 * (e.atr / e.price))}.`,
+    });
+  }
+  {
+    const rUnit = EXIT.STOP_ATR * e.atr;
+    const be = e.price + e.direction * rUnit;
+    const partial = e.price + e.direction * 2 * rUnit;
+    steps.push({
+      title: "מתי לוקחים רווח — סולם, לא ניחוש",
+      detail: `כשהמחיר מגיע ל-${fmt(be)} (רווח של 1R): מזיזים את הסטופ לנקודת הכניסה — מעכשיו העסקה לא יכולה להפסיד. כשהמחיר מגיע ל-${fmt(partial)} (רווח של 2R): מוכרים חצי (רווח של ~${fmt(amount * EXIT.PARTIAL_AT_R * (rUnit / e.price) * EXIT.PARTIAL_FRAC)}) וגוררים סטופ על היתרה במרחק ${fmt(EXIT.TRAIL_ATR * e.atr)} מהשיא. בלי יעד קבוע — יעד קבוע חותך את העסקאות הגדולות שמממנות את כל הקטנות.`,
     });
   }
   steps.push({

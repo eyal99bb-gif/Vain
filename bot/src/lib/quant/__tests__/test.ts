@@ -15,6 +15,8 @@ import {
 } from "../markov";
 import { wilson } from "../probability";
 import { kellyFraction } from "../risk";
+import { EXIT, exitState } from "../exits";
+import { compareExitStyles } from "../tradeBacktest";
 import { resample } from "../resample";
 import { walkForward } from "../backtest";
 
@@ -155,6 +157,54 @@ const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
     close(last.c, series.candles[series.candles.length - 1].c, 1e-9),
     "resampled last close equals the last daily close",
   );
+}
+
+// ── 9. Exit ladder state machine ────────────────────────────────────────────
+{
+  const mk = (closes: number[]) =>
+    closes.map((c, i) => ({ t: i, o: c, h: c * 1.001, l: c * 0.999, c, v: 0 }));
+  // entry 100, ATR 10 → R unit = 25, BE at 125, partial at 150, trail dist 30
+  const base = { entry: 100, dir: 1 as const, entryAtr: 10, tookPartial: false };
+
+  const s0 = exitState({ ...base, candles: mk([100]), fromIdx: 0, toIdx: 0 });
+  assert(s0.action === "hold" && close(s0.stop, 75, 1e-9),
+    "at entry the stop is entry-2.5*ATR");
+
+  const s1 = exitState({ ...base, candles: mk([100, 120]), fromIdx: 0, toIdx: 1 });
+  assert(s1.action === "hold" && !s1.breakeven && close(s1.stop, 90, 1e-9),
+    "below +1R the chandelier already trails (120-3*ATR=90)");
+
+  const s2 = exitState({ ...base, candles: mk([100, 120, 130]), fromIdx: 0, toIdx: 2 });
+  assert(s2.breakeven && close(s2.stop, 100, 1e-9), "at +1R the stop moves to breakeven");
+
+  const s3 = exitState({ ...base, candles: mk([100, 120, 130, 180]), fromIdx: 0, toIdx: 3 });
+  assert(s3.shouldPartial && s3.action === "take_partial", "at +2R a partial is recommended");
+  assert(close(s3.stop, 150, 1e-9), "chandelier trails to highest close - 3*ATR");
+
+  const s4 = exitState({ ...base, tookPartial: true, candles: mk([100, 120, 130, 180, 160, 140]), fromIdx: 0, toIdx: 5 });
+  assert(s4.exited && s4.action === "exit_stop" && s4.exitIdx === 5,
+    "close under the trailed stop exits the trade");
+
+  const s5 = exitState({ ...base, candles: mk([100, 70]), fromIdx: 0, toIdx: 1 });
+  assert(s5.exited && close(s5.stop, 75, 1e-9), "immediate drop exits at the initial stop");
+
+  const sShort = exitState({ entry: 100, dir: -1, entryAtr: 10, tookPartial: false,
+    candles: mk([100, 80, 70, 50]), fromIdx: 0, toIdx: 3 });
+  assert(sShort.shouldPartial && sShort.breakeven, "short side mirrors the ladder");
+}
+
+// ── 10. Trade backtest: sanity + no look-ahead ─────────────────────────────
+{
+  const series = syntheticDailyFixture("TB", 4, 5);
+  const cfg = configFor("crypto", "1d");
+  cfg.warmup = 400;
+  const rows = compareExitStyles(series.candles, cfg);
+  assert(rows.length === 4 && rows.every((r) => isFinite(r.avgR)), "four styles, finite stats");
+  assert(rows[2].trades > 0, "ladder style actually trades", `got ${rows[2].trades}`);
+  assert(rows[3].trades <= rows[2].trades, "selective entries trade less or equal");
+  const rows2 = compareExitStyles(series.candles, cfg);
+  assert(JSON.stringify(rows) === JSON.stringify(rows2), "trade backtest is deterministic");
+  assert(EXIT.PARTIAL_FRAC > 0 && EXIT.PARTIAL_FRAC < 1, "partial fraction sane");
 }
 
 console.log(`\nAll ${passed} checks passed.`);

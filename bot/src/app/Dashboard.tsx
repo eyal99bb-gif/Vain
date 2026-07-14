@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { analyze, type Analysis } from "@/lib/quant/analyze";
+import { EXIT, exitState } from "@/lib/quant/exits";
+import { buildActionPlan } from "@/lib/quant/plan";
+import { compareExitStyles, type TradeStyleReport } from "@/lib/quant/tradeBacktest";
 import { ASSETS } from "@/lib/quant/config";
 import { STATE_NAMES_HE } from "@/lib/quant/markov";
 import { fetchSeries } from "@/lib/quant/fetchClient";
@@ -74,6 +77,7 @@ export default function TradingDashboard() {
   }, [assetId, interval]);
 
   const [alertsOn, setAlertsOn] = useState(false);
+  const [strongOnly, setStrongOnly] = useState(false);
   const lastDir = useRef<Record<string, number>>({});
 
   const toggleAlerts = useCallback(() => {
@@ -92,6 +96,25 @@ export default function TradingDashboard() {
       return null; // label self-check refused to display — safer to show nothing
     }
   }, [series, account]);
+
+  const shown: Analysis | null = useMemo(() => {
+    if (!analysis) return null;
+    if (!strongOnly || analysis.ensemble.direction === 0 || analysis.ensemble.conviction >= 0.35)
+      return analysis;
+    // selective mode: the signal is below the chosen bar — honest flat
+    const ens = { ...analysis.ensemble, direction: 0 as const, positionFrac: 0, stop: null };
+    return {
+      ...analysis,
+      ensemble: ens,
+      plan: [
+        {
+          title: "מצב סלקטיבי: האות חלש מהסף (35%)",
+          detail: `יש אות ${analysis.ensemble.direction > 0 ? "לונג" : "שורט"} אבל הביטחון (${(analysis.ensemble.conviction * 100).toFixed(0)}%) נמוך מהרף שבחרת — נשארים בחוץ. סבלנות היא פוזיציה.`,
+        },
+        ...buildActionPlan(ens, analysis.hitRate, analysis.cfg, account).slice(1),
+      ],
+    };
+  }, [analysis, strongOnly, account]);
 
   useEffect(() => {
     if (!analysis || !alertsOn || typeof Notification === "undefined") return;
@@ -188,6 +211,17 @@ export default function TradingDashboard() {
         >
           {alertsOn ? "🔔 התראות פועלות" : "🔕 הפעל התראות"}
         </button>
+        <button
+          onClick={() => setStrongOnly((v) => !v)}
+          className="rounded-md px-4 py-2 text-sm"
+          style={{
+            background: strongOnly ? "rgba(202,138,4,0.15)" : C.card,
+            border: `1px solid ${strongOnly ? "rgba(202,138,4,0.5)" : C.border}`,
+            color: strongOnly ? "#F0CC55" : "rgba(255,255,255,0.6)",
+          }}
+        >
+          {strongOnly ? "🎯 אותות חזקים בלבד" : "🎯 סחור רק באותות חזקים"}
+        </button>
       </div>
 
       {/* data source status */}
@@ -237,15 +271,16 @@ export default function TradingDashboard() {
         </p>
       )}
 
-      {!loading && analysis && series && (
+      {!loading && shown && series && (
         <main className="flex flex-col gap-6">
-          <SignalCard a={analysis} series={series} />
-          <PlanCard a={analysis} />
-          <SubSignalsCard a={analysis} />
-          <MatrixCard a={analysis} />
-          <BacktestCard a={analysis} />
+          <SignalCard a={shown} series={series} />
+          <PlanCard a={shown} />
+          <SubSignalsCard a={shown} />
+          <MatrixCard a={shown} />
+          <BacktestCard a={shown} />
+          <ExitStylesCard series={series} a={shown} strongOnly={strongOnly} />
           <PortfolioCard account={account} />
-          <JournalCard a={analysis} assetId={assetId} account={account} />
+          <JournalCard a={shown} assetId={assetId} account={account} series={series} />
           <p className="text-xs text-white/30 text-center pb-8">
             בקטסטים מחמיאים. המטריצה המתוקנת מראה מספרים מכוערים יותר — אבל
             אמיתיים, ורק הם שווים מסחר.
@@ -693,6 +728,8 @@ interface JournalTrade {
   entry: number;
   amount: number;
   openedAt: number;
+  entryAtr?: number;
+  partialPrice?: number;
   exit?: number;
   closedAt?: number;
 }
@@ -708,7 +745,7 @@ function loadJournal(): JournalTrade[] {
   }
 }
 
-function JournalCard({ a, assetId, account }: { a: Analysis; assetId: string; account: number }) {
+function JournalCard({ a, assetId, account, series }: { a: Analysis; assetId: string; account: number; series: PriceSeries }) {
   const [trades, setTrades] = useState<JournalTrade[]>(loadJournal);
   const save = (next: JournalTrade[]) => {
     setTrades(next);
@@ -727,8 +764,33 @@ function JournalCard({ a, assetId, account }: { a: Analysis; assetId: string; ac
         entry: e.price,
         amount: account * Math.abs(e.positionFrac),
         openedAt: Date.now(),
+        entryAtr: e.atr,
       },
     ]);
+  };
+
+  const takePartial = (id: number) => {
+    save(
+      trades.map((t) =>
+        t.id === id && t.asset === assetId && t.partialPrice === undefined
+          ? { ...t, partialPrice: a.ensemble.price }
+          : t,
+      ),
+    );
+  };
+
+  const guidanceFor = (t: JournalTrade) => {
+    if (t.exit !== undefined || t.asset !== assetId || !t.entryAtr) return null;
+    const fromIdx = series.candles.findIndex((c) => c.t >= t.openedAt);
+    return exitState({
+      entry: t.entry,
+      dir: t.dir > 0 ? 1 : -1,
+      entryAtr: t.entryAtr,
+      candles: series.candles,
+      fromIdx: fromIdx === -1 ? series.candles.length - 1 : fromIdx,
+      toIdx: series.candles.length - 1,
+      tookPartial: t.partialPrice !== undefined,
+    });
   };
 
   const closeTrade = (id: number) => {
@@ -741,7 +803,13 @@ function JournalCard({ a, assetId, account }: { a: Analysis; assetId: string; ac
     );
   };
 
-  const pnl = (t: JournalTrade, price: number) => t.amount * ((price / t.entry - 1) * t.dir);
+  const pnl = (t: JournalTrade, price: number) => {
+    if (t.partialPrice !== undefined) {
+      const half = t.amount * EXIT.PARTIAL_FRAC;
+      return half * ((t.partialPrice / t.entry - 1) * t.dir) + half * ((price / t.entry - 1) * t.dir);
+    }
+    return t.amount * ((price / t.entry - 1) * t.dir);
+  };
   const closed = trades.filter((t) => t.exit !== undefined);
   const wins = closed.filter((t) => pnl(t, t.exit!) > 0).length;
   const totalPnl = closed.reduce((s, t) => s + pnl(t, t.exit!), 0);
@@ -816,8 +884,124 @@ function JournalCard({ a, assetId, account }: { a: Analysis; assetId: string; ac
               })}
             </tbody>
           </table>
+          {trades
+            .filter((t) => t.exit === undefined && t.asset === assetId)
+            .map((t) => {
+              const g = guidanceFor(t);
+              if (!g) return null;
+              const col = g.action === "exit_stop" ? C.short : g.action === "take_partial" ? "#F0CC55" : C.flat;
+              return (
+                <div
+                  key={`g-${t.id}`}
+                  className="mt-3 rounded-lg p-3 text-xs flex flex-wrap items-center gap-3"
+                  style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}` }}
+                >
+                  <span className="font-semibold" style={{ color: col }}>
+                    הנחיית יציאה ({t.asset}):
+                  </span>
+                  <span className="text-white/60">{g.hint}</span>
+                  {g.action === "take_partial" && (
+                    <button
+                      onClick={() => takePartial(t.id)}
+                      className="rounded px-3 py-1 font-semibold"
+                      style={{ background: "rgba(202,138,4,0.2)", color: "#F0CC55" }}
+                    >
+                      קח חצי רווח עכשיו
+                    </button>
+                  )}
+                  {g.action === "exit_stop" && (
+                    <button
+                      onClick={() => closeTrade(t.id)}
+                      className="rounded px-3 py-1 font-semibold"
+                      style={{ background: "rgba(230,103,103,0.15)", color: C.short }}
+                    >
+                      סגור לפי הסטופ
+                    </button>
+                  )}
+                </div>
+              );
+            })}
         </div>
       )}
+    </Card>
+  );
+}
+
+// ─── EXIT-STYLE COMPARISON ───────────────────────────────────────────────────
+
+const STYLE_NAMES: Record<string, string> = {
+  "signal:0": "יציאה בהיפוך אות בלבד",
+  "stop:0": "סטופ התחלתי + אות",
+  "ladder:0": "הסולם המלא (איזון ← חצי ← גרירה)",
+  "ladder:0.35": "הסולם + אותות חזקים בלבד",
+};
+
+function ExitStylesCard({ series, a, strongOnly }: { series: PriceSeries; a: Analysis; strongOnly: boolean }) {
+  const rows: TradeStyleReport[] | null = useMemo(() => {
+    try {
+      return compareExitStyles(series.candles, a.cfg);
+    } catch {
+      return null;
+    }
+  }, [series, a.cfg]);
+  if (!rows) return null;
+  const highlight = strongOnly ? "ladder:0.35" : "ladder:0";
+  return (
+    <Card title="איזו שיטת יציאה באמת עובדת כאן? (בדיקה עסקה-אחר-עסקה)">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-right">
+          <thead>
+            <tr className="text-xs text-white/40">
+              <th className="p-2 font-normal">שיטה</th>
+              <th className="p-2 font-normal">עסקאות</th>
+              <th className="p-2 font-normal">אחוז הצלחה</th>
+              <th className="p-2 font-normal">R ממוצע</th>
+              <th className="p-2 font-normal">Profit Factor</th>
+              <th className="p-2 font-normal">ירידה מקס&apos;</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const key = `${r.style}:${r.minConviction}`;
+              const hl = key === highlight;
+              return (
+                <tr
+                  key={key}
+                  style={{
+                    borderTop: `1px solid ${C.border}`,
+                    background: hl ? "rgba(202,138,4,0.08)" : undefined,
+                  }}
+                >
+                  <td className="p-2 text-white/80">
+                    {STYLE_NAMES[key]}
+                    {hl && <span style={{ color: C.gold }}> ← פעיל</span>}
+                  </td>
+                  <td className="p-2 text-white/60">{r.trades}</td>
+                  <td className="p-2 text-white/80">{pctS(r.winRate)}</td>
+                  <td
+                    className="p-2 font-semibold"
+                    style={{ color: r.avgR >= 0 ? C.long : C.short }}
+                  >
+                    {r.avgR >= 0 ? "+" : ""}
+                    {r.avgR.toFixed(2)}R
+                  </td>
+                  <td className="p-2 text-white/80">
+                    {r.profitFactor === Infinity ? "∞" : r.profitFactor.toFixed(2)}
+                  </td>
+                  <td className="p-2 text-white/60">{pctS(r.maxDrawdown)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-white/40 mt-3 leading-relaxed">
+        כל שורה היא אותם אותות כניסה בדיוק — רק היציאה שונה (בהנחת סיכון 1%
+        מהתיק לעסקה, כולל עמלות). שים לב: אחוז הצלחה גבוה לא אומר רווחיות —
+        R ממוצע ו-Profit Factor הם שקובעים. הסולם לרוב מעלה אחוז הצלחה אבל
+        לפעמים מפסיד לגרירה חופשית בשוק שור חזק. המספרים כאן מוגבלים
+        להיסטוריה שנטענה — לא הבטחה.
+      </p>
     </Card>
   );
 }
