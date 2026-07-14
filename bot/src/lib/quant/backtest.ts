@@ -5,6 +5,7 @@
 import { maxDrawdown } from "./indicators";
 import { labelStates, signalFrom, transitionMatrix } from "./markov";
 import { ensembleAt } from "./ensemble";
+import { DEFAULT_DD_GUARD } from "./risk";
 import type { BacktestReport, Candle, EngineConfig } from "./types";
 
 const clip = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
@@ -23,25 +24,32 @@ export function walkForward(
   const barRet: number[] = [];
   for (let i = 0; i < n - 1; i++) barRet.push(px[i + 1] / px[i] - 1);
 
+  // single pass so the drawdown circuit breaker can react to live equity:
+  // when the guard is on and equity drops past `trigger`, positions are
+  // scaled down until recovery above `release`.
+  const guard = cfg.ddGuard ? DEFAULT_DD_GUARD : null;
   const pos = new Array<number>(n).fill(0);
-  for (let t = cfg.warmup; t < n - 1; t++) pos[t] = positionAt(t);
-
   const cost = cfg.costBps / 1e4;
-  const stratFull: number[] = [];
-  for (let i = 0; i < n - 1; i++) {
-    const dPos = Math.abs(pos[i] - (i > 0 ? pos[i - 1] : 0));
-    stratFull.push(pos[i] * barRet[i] - dPos * cost);
-  }
-  const strat = stratFull.slice(cfg.warmup);
-  const bench = barRet.slice(cfg.warmup);
-
+  const strat: number[] = [];
   const equity: number[] = [];
   const benchEquity: number[] = [];
   let e = 1;
   let b = 1;
-  for (let i = 0; i < strat.length; i++) {
-    e *= 1 + strat[i];
-    b *= 1 + bench[i];
+  let peak = 1;
+  let guardScale = 1;
+  for (let t = cfg.warmup; t < n - 1; t++) {
+    if (guard) {
+      const dd = e / peak - 1;
+      if (dd <= guard.trigger) guardScale = guard.scale;
+      else if (dd >= guard.release) guardScale = 1;
+    }
+    pos[t] = positionAt(t) * guardScale;
+    const dPos = Math.abs(pos[t] - pos[t - 1]);
+    const r = pos[t] * barRet[t] - dPos * cost;
+    strat.push(r);
+    e *= 1 + r;
+    b *= 1 + barRet[t];
+    if (e > peak) peak = e;
     equity.push(e);
     benchEquity.push(b);
   }
@@ -92,4 +100,9 @@ export function backtestMarkovOnly(candles: Candle[], cfg: EngineConfig): Backte
 /** The full ensemble strategy — what the dashboard trades on paper. */
 export function backtestEnsemble(candles: Candle[], cfg: EngineConfig): BacktestReport {
   return walkForward(candles, cfg, (t) => ensembleAt(candles, t, cfg).positionFrac);
+}
+
+/** Robustness stress: the same backtest at double transaction costs. */
+export function backtestEnsembleStress(candles: Candle[], cfg: EngineConfig): BacktestReport {
+  return backtestEnsemble(candles, { ...cfg, costBps: cfg.costBps * 2 });
 }

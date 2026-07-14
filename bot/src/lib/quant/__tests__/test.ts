@@ -14,6 +14,9 @@ import {
   transitionMatrix,
 } from "../markov";
 import { wilson } from "../probability";
+import { kellyFraction } from "../risk";
+import { resample } from "../resample";
+import { walkForward } from "../backtest";
 
 let passed = 0;
 function assert(cond: boolean, name: string, detail = "") {
@@ -110,6 +113,48 @@ const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
   assert(hi > 0.67 && hi < 0.69, "Wilson upper bound for 22/41 ≈ 0.68", `got ${hi}`);
   const z = wilson(0, 0);
   assert(z.lo === 0 && z.hi === 1, "Wilson with n=0 returns the full interval");
+}
+
+// ── 6. Kelly sizing ─────────────────────────────────────────────────────────
+{
+  // p=0.55, PF=1.5 → payoff R = 1.5*0.45/0.55 ≈ 1.227; f* = 0.55-0.45/1.227 ≈ 0.183
+  const k = kellyFraction(0.55, 1.5, 1.0);
+  assert(close(k.full, 0.1833, 0.002), "Kelly full fraction for p=0.55, PF=1.5", `got ${k.full}`);
+  assert(close(k.half, 0.0917, 0.002), "half-Kelly is half, clipped to cap");
+  const noEdge = kellyFraction(0.5, 0.9, 1.0);
+  assert(noEdge.half === 0, "no measured edge → suggested size 0", `got ${noEdge.half}`);
+}
+
+// ── 7. Drawdown circuit breaker ─────────────────────────────────────────────
+{
+  const series = syntheticDailyFixture("DD", 4, 11);
+  const cfg = configFor("crypto", "1d");
+  cfg.warmup = 300;
+  const alwaysLong = () => 1;
+  const off = walkForward(series.candles, { ...cfg, ddGuard: false }, alwaysLong);
+  const on = walkForward(series.candles, { ...cfg, ddGuard: true }, alwaysLong);
+  assert(
+    on.maxDrawdown >= off.maxDrawdown,
+    "dd guard never deepens max drawdown for an always-long strategy",
+    `on ${on.maxDrawdown} off ${off.maxDrawdown}`,
+  );
+  assert(off.exposure === 1 && on.bars === off.bars, "guard changes size, not the test window");
+}
+
+// ── 8. Weekly resample ──────────────────────────────────────────────────────
+{
+  const series = syntheticDailyFixture("RS", 2, 3);
+  const weekly = resample(series.candles, "1w");
+  assert(
+    weekly.length > 90 && weekly.length < 120,
+    "2y of daily bars resample to ~104 weekly bars",
+    `got ${weekly.length}`,
+  );
+  const last = weekly[weekly.length - 1];
+  assert(
+    close(last.c, series.candles[series.candles.length - 1].c, 1e-9),
+    "resampled last close equals the last daily close",
+  );
 }
 
 console.log(`\nAll ${passed} checks passed.`);

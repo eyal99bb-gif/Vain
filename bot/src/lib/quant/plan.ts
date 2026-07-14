@@ -1,3 +1,4 @@
+import type { KellyResult } from "./risk";
 import type { EngineConfig, EnsembleResult, HitRate } from "./types";
 
 export interface ActionStep {
@@ -22,6 +23,7 @@ export function buildActionPlan(
   hit: HitRate,
   cfg: EngineConfig,
   accountSize: number,
+  kelly?: KellyResult,
 ): ActionStep[] {
   const steps: ActionStep[] = [];
   const period = intervalName(cfg.interval);
@@ -42,13 +44,26 @@ export function buildActionPlan(
   const dirWord = e.direction > 0 ? "לונג (קנייה)" : "שורט (מכירה בחסר)";
   const amount = accountSize * Math.abs(e.positionFrac);
 
+  if (kelly && kelly.half === 0) {
+    steps.push({
+      title: "עצירה: אין יתרון היסטורי מדוד — הגודל המוצע הוא 0",
+      detail:
+        "יש אות כיווני, אבל נוסחת קלי על הבדיקה ההיסטורית של הנכס הזה לא מוצאת יתרון שמצדיק סיכון כסף. משקיע מקצועי לא נכנס לעסקה כזו — וזו בדיוק ההגנה שהבוט נותן לך.",
+    });
+    steps.push({
+      title: "מה כן לעשות",
+      detail: `לעקוב על נייר בלבד, ולבדוק שוב בסגירת ה${intervalName(cfg.interval)} הבא.`,
+    });
+    return steps;
+  }
+
   steps.push({
     title: `כיוון: ${dirWord}`,
     detail: `האות המשולב הוא ${e.score > 0 ? "+" : ""}${e.score.toFixed(2)} (סקאלה של ‎-1 עד ‎+1), עם ביטחון של ${(e.conviction * 100).toFixed(0)}%.`,
   });
   steps.push({
     title: "כמה להשקיע (גודל פוזיציה)",
-    detail: `${(Math.abs(e.positionFrac) * 100).toFixed(0)}% מהתיק — ${fmt(amount)} על תיק של ${fmt(accountSize)}. הגודל נקבע לפי יעד תנודתיות: כשהשוק סוער, הפוזיציה קטנה אוטומטית.`,
+    detail: `${(Math.abs(e.positionFrac) * 100).toFixed(0)}% מהתיק — ${fmt(amount)} על תיק של ${fmt(accountSize)}. הגודל הוא הנמוך מבין יעד-תנודתיות וחצי-קלי${kelly ? ` (קלי מלא: ${(kelly.full * 100).toFixed(0)}%)` : ""} — כפול שיטת ניהול סיכונים, כמו בקרנות מקצועיות.`,
   });
   steps.push({
     title: "אזור כניסה",

@@ -48,10 +48,14 @@ export interface EngineConfig {
   targetVol: number;
   /** max position as fraction of account */
   cap: number;
+  /** gate daily signals with the weekly trend (multi-timeframe confluence) */
+  confluence?: boolean;
+  /** enable the drawdown circuit breaker in backtests */
+  ddGuard?: boolean;
 }
 
 export interface SubSignal {
-  id: "markov" | "momentum" | "trend" | "meanrev" | "vol";
+  id: "markov" | "momentum" | "trend" | "meanrev" | "vol" | "htf";
   name: string; // Hebrew display name
   /** directional vote in [-1, +1]; the vol signal always votes 0 */
   vote: number;

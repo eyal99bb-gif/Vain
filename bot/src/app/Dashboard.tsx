@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { analyze, type Analysis } from "@/lib/quant/analyze";
 import { ASSETS } from "@/lib/quant/config";
 import { STATE_NAMES_HE } from "@/lib/quant/markov";
@@ -73,6 +73,17 @@ export default function TradingDashboard() {
     };
   }, [assetId, interval]);
 
+  const [alertsOn, setAlertsOn] = useState(false);
+  const lastDir = useRef<Record<string, number>>({});
+
+  const toggleAlerts = useCallback(() => {
+    if (!alertsOn && typeof Notification !== "undefined") {
+      Notification.requestPermission().then((p) => setAlertsOn(p === "granted"));
+    } else {
+      setAlertsOn(false);
+    }
+  }, [alertsOn]);
+
   const analysis: Analysis | null = useMemo(() => {
     if (!series || series.candles.length < 60) return null;
     try {
@@ -81,6 +92,20 @@ export default function TradingDashboard() {
       return null; // label self-check refused to display — safer to show nothing
     }
   }, [series, account]);
+
+  useEffect(() => {
+    if (!analysis || !alertsOn || typeof Notification === "undefined") return;
+    const key = `${assetId}:${interval}`;
+    const prev = lastDir.current[key];
+    const dir = analysis.ensemble.direction;
+    if (prev !== undefined && prev !== dir && Notification.permission === "granted") {
+      const txt = dir > 0 ? "לונג ↑" : dir < 0 ? "שורט ↓" : "מחוץ לשוק";
+      new Notification(`Vain Trading — ${assetId}`, {
+        body: `האות התהפך: עכשיו ${txt}`,
+      });
+    }
+    lastDir.current[key] = dir;
+  }, [analysis, alertsOn, assetId, interval]);
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-8 max-w-4xl mx-auto" dir="rtl">
@@ -152,6 +177,17 @@ export default function TradingDashboard() {
             style={{ background: C.card, border: `1px solid ${C.border}` }}
           />
         </label>
+        <button
+          onClick={toggleAlerts}
+          className="rounded-md px-4 py-2 text-sm"
+          style={{
+            background: alertsOn ? "rgba(25,158,112,0.15)" : C.card,
+            border: `1px solid ${alertsOn ? "rgba(25,158,112,0.5)" : C.border}`,
+            color: alertsOn ? C.long : "rgba(255,255,255,0.6)",
+          }}
+        >
+          {alertsOn ? "🔔 התראות פועלות" : "🔕 הפעל התראות"}
+        </button>
       </div>
 
       {/* data source status */}
@@ -208,6 +244,8 @@ export default function TradingDashboard() {
           <SubSignalsCard a={analysis} />
           <MatrixCard a={analysis} />
           <BacktestCard a={analysis} />
+          <PortfolioCard account={account} />
+          <JournalCard a={analysis} assetId={assetId} account={account} />
           <p className="text-xs text-white/30 text-center pb-8">
             בקטסטים מחמיאים. המטריצה המתוקנת מראה מספרים מכוערים יותר — אבל
             אמיתיים, ורק הם שווים מסחר.
@@ -436,8 +474,20 @@ function BacktestCard({ a }: { a: Analysis }) {
           </div>
         ))}
       </div>
+      <div className="mt-3 rounded-lg p-3 text-xs leading-relaxed" style={{ background: "rgba(255,255,255,0.04)" }}>
+        <span className="text-white/70 font-semibold">מבחן עמידות בעמלות כפולות: </span>
+        <span className="text-white/50">
+          Profit Factor {a.stress.profitFactor === Infinity ? "∞" : a.stress.profitFactor.toFixed(2)} ·
+          תשואה שנתית {pctS(a.stress.cagr)} —{" "}
+          {a.stress.profitFactor > 1
+            ? "האסטרטגיה שורדת גם בעלויות מסחר כפולות."
+            : "בעלויות כפולות היתרון נעלם — סימן שהיתרון רגיש לעמלות. זהירות."}
+        </span>
+      </div>
       <p className="text-xs text-white/40 mt-3">
-        המנוע לומד רק מהעבר של כל נקודה — אף פעם לא מהעתיד. העמלות כלולות.
+        המנוע לומד רק מהעבר של כל נקודה — אף פעם לא מהעתיד. העמלות כלולות. בלם
+        חירום פעיל: בירידה של 15% מהשיא הפוזיציות נחתכות בחצי עד התאוששות.
+        גודל הפוזיציה החי מוגבל גם לפי חצי-קלי ({(a.kelly.half * 100).toFixed(0)}% מהתיק כרגע).
       </p>
     </Card>
   );
@@ -539,5 +589,235 @@ function EquityChart({ b }: { b: BacktestReport }) {
         </span>
       </div>
     </div>
+  );
+}
+
+// ─── PORTFOLIO OVERVIEW ──────────────────────────────────────────────────────
+
+interface PortfolioRow {
+  id: string;
+  label: string;
+  price: number;
+  direction: number;
+  conviction: number;
+  size: number;
+  live: boolean;
+}
+
+function PortfolioCard({ account }: { account: number }) {
+  const [rows, setRows] = useState<PortfolioRow[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const cryptos = ASSETS.filter((a) => a.kind === "crypto");
+    Promise.all(
+      cryptos.map(async (asset): Promise<PortfolioRow | null> => {
+        try {
+          const series = await fetchSeries(asset.id, "1d");
+          const a = analyze(series, account);
+          return {
+            id: asset.id,
+            label: asset.label,
+            price: a.ensemble.price,
+            direction: a.ensemble.direction,
+            conviction: a.ensemble.conviction,
+            size: Math.abs(a.ensemble.positionFrac),
+            live: series.source !== "fixture",
+          };
+        } catch {
+          return null;
+        }
+      }),
+    ).then((r) => {
+      if (alive) setRows(r.filter((x): x is PortfolioRow => x !== null));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [account]);
+
+  const totalReq = rows?.reduce((s, r) => s + (r.direction !== 0 ? r.size : 0), 0) ?? 0;
+  const scale = totalReq > 1 ? 1 / totalReq : 1;
+
+  return (
+    <Card title="סקירת תיק — כל המטבעות (נרות יומיים)">
+      {!rows && <p className="text-sm text-white/40">טוען ומנתח את כל המטבעות…</p>}
+      {rows && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-right">
+            <thead>
+              <tr className="text-xs text-white/40">
+                <th className="p-2 font-normal">נכס</th>
+                <th className="p-2 font-normal">מחיר</th>
+                <th className="p-2 font-normal">אות</th>
+                <th className="p-2 font-normal">ביטחון</th>
+                <th className="p-2 font-normal">הקצאה מוצעת</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                  <td className="p-2 text-white/80">
+                    {r.label}
+                    {!r.live && <span style={{ color: C.short }}> ⚠ לא חי</span>}
+                  </td>
+                  <td className="p-2 text-white/60" dir="ltr">
+                    ${r.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2 font-semibold" style={{ color: r.direction > 0 ? C.long : r.direction < 0 ? C.short : C.flat }}>
+                    {r.direction > 0 ? "לונג ↑" : r.direction < 0 ? "שורט ↓" : "בחוץ —"}
+                  </td>
+                  <td className="p-2 text-white/60">{pctS(r.conviction, 0)}</td>
+                  <td className="p-2 text-white/80">
+                    {r.direction === 0 ? "—" : `${(r.size * scale * 100).toFixed(0)}% (${(r.size * scale * account).toLocaleString("he-IL", { maximumFractionDigits: 0 })})`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-white/40 mt-2">
+            ההקצאות מוגבלות יחד ל-100% מהתיק{totalReq > 1 ? " (נורמלו כלפי מטה)" : ""}.
+            כל נכס עובר את אותו ניתוח מלא: אות משולב, קלי, ובלם חירום.
+          </p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── PAPER-TRADE JOURNAL ─────────────────────────────────────────────────────
+
+interface JournalTrade {
+  id: number;
+  asset: string;
+  dir: number;
+  entry: number;
+  amount: number;
+  openedAt: number;
+  exit?: number;
+  closedAt?: number;
+}
+
+const JOURNAL_KEY = "vain-trading-journal-v1";
+
+function loadJournal(): JournalTrade[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(JOURNAL_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function JournalCard({ a, assetId, account }: { a: Analysis; assetId: string; account: number }) {
+  const [trades, setTrades] = useState<JournalTrade[]>(loadJournal);
+  const save = (next: JournalTrade[]) => {
+    setTrades(next);
+    localStorage.setItem(JOURNAL_KEY, JSON.stringify(next));
+  };
+
+  const openTrade = () => {
+    const e = a.ensemble;
+    if (e.direction === 0 || Math.abs(e.positionFrac) === 0) return;
+    save([
+      ...trades,
+      {
+        id: Date.now(),
+        asset: assetId,
+        dir: e.direction,
+        entry: e.price,
+        amount: account * Math.abs(e.positionFrac),
+        openedAt: Date.now(),
+      },
+    ]);
+  };
+
+  const closeTrade = (id: number) => {
+    save(
+      trades.map((t) =>
+        t.id === id && t.asset === assetId
+          ? { ...t, exit: a.ensemble.price, closedAt: Date.now() }
+          : t,
+      ),
+    );
+  };
+
+  const pnl = (t: JournalTrade, price: number) => t.amount * ((price / t.entry - 1) * t.dir);
+  const closed = trades.filter((t) => t.exit !== undefined);
+  const wins = closed.filter((t) => pnl(t, t.exit!) > 0).length;
+  const totalPnl = closed.reduce((s, t) => s + pnl(t, t.exit!), 0);
+
+  return (
+    <Card title="יומן עסקאות נייר (נשמר בדפדפן שלך בלבד)">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <button
+          onClick={openTrade}
+          disabled={a.ensemble.direction === 0 || Math.abs(a.ensemble.positionFrac) === 0}
+          className="rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-40"
+          style={{ background: "rgba(202,138,4,0.2)", color: "#F0CC55", border: "1px solid rgba(202,138,4,0.4)" }}
+        >
+          + פתח עסקת נייר לפי האות הנוכחי
+        </button>
+        {closed.length > 0 && (
+          <span className="text-xs text-white/50">
+            {closed.length} עסקאות סגורות · {wins} מנצחות ({((wins / closed.length) * 100).toFixed(0)}%) · רווח/הפסד מצטבר:{" "}
+            <span style={{ color: totalPnl >= 0 ? C.long : C.short }}>
+              {totalPnl >= 0 ? "+" : ""}
+              {totalPnl.toLocaleString("he-IL", { maximumFractionDigits: 0 })}
+            </span>
+          </span>
+        )}
+      </div>
+      {trades.length === 0 && (
+        <p className="text-sm text-white/40">
+          עדיין אין עסקאות. הכלל של המקצוענים: 10 עסקאות נייר מתועדות לפני שקל אמיתי.
+        </p>
+      )}
+      {trades.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-right">
+            <thead>
+              <tr className="text-xs text-white/40">
+                <th className="p-2 font-normal">נכס</th>
+                <th className="p-2 font-normal">כיוון</th>
+                <th className="p-2 font-normal">כניסה</th>
+                <th className="p-2 font-normal">סכום</th>
+                <th className="p-2 font-normal">רווח/הפסד</th>
+                <th className="p-2 font-normal"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...trades].reverse().map((t) => {
+                const price = t.exit ?? (t.asset === assetId ? a.ensemble.price : null);
+                const p = price !== null ? pnl(t, price) : null;
+                return (
+                  <tr key={t.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                    <td className="p-2 text-white/80">{t.asset}</td>
+                    <td className="p-2" style={{ color: t.dir > 0 ? C.long : C.short }}>
+                      {t.dir > 0 ? "לונג" : "שורט"}
+                    </td>
+                    <td className="p-2 text-white/60" dir="ltr">${t.entry.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td>
+                    <td className="p-2 text-white/60">{t.amount.toLocaleString("he-IL", { maximumFractionDigits: 0 })}</td>
+                    <td className="p-2 font-semibold" style={{ color: p === null ? C.flat : p >= 0 ? C.long : C.short }}>
+                      {p === null ? "—" : `${p >= 0 ? "+" : ""}${p.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`}
+                      {t.exit === undefined && p !== null && <span className="text-white/30"> (פתוחה)</span>}
+                    </td>
+                    <td className="p-2">
+                      {t.exit === undefined &&
+                        (t.asset === assetId ? (
+                          <button onClick={() => closeTrade(t.id)} className="text-xs underline text-white/60">
+                            סגור עכשיו
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-white/30">החלף ל-{t.asset} כדי לסגור</span>
+                        ))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }

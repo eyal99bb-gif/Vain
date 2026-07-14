@@ -1,4 +1,5 @@
 import { realizedVol } from "./indicators";
+import { resample } from "./resample";
 import {
   currentAtr,
   markovSignal,
@@ -36,8 +37,37 @@ export function ensembleAt(
   ];
   const directional = subs.filter((s) => s.id !== "vol");
   const score = directional.reduce((a, s) => a + s.vote, 0) / directional.length;
+
+  // multi-timeframe confluence: on daily bars, the weekly trend must agree
+  // for full size. Uses only candles[0..upto] — resampling a prefix cannot
+  // look ahead.
+  let htfMult = 1;
+  if (cfg.confluence && cfg.interval === "1d") {
+    const weekly = resample(candles.slice(0, upto + 1), "1w");
+    const wCloses = weekly.map((c) => c.c);
+    const wCfg = { ...cfg, interval: "1w" as const };
+    if (weekly.length > 45) {
+      const wTrend = trendSignal(wCloses, weekly.length - 1, wCfg).vote;
+      const wMom = momentumSignal(wCloses, weekly.length - 1, wCfg).vote;
+      const htf = (wTrend + wMom) / 2;
+      htfMult = Math.abs(htf) < 0.1 ? 0.75 : Math.sign(htf) === Math.sign(score) ? 1 : 0.4;
+      subs.push({
+        id: "htf",
+        name: "אישור רב-מסגרות (שבועי)",
+        vote: 0,
+        convictionMult: htfMult,
+        rationale:
+          htfMult === 1
+            ? "המגמה השבועית מסכימה עם האות היומי — גודל מלא"
+            : htfMult === 0.75
+              ? "המגמה השבועית ניטרלית — גודל מוקטן ל-75%"
+              : "המגמה השבועית מתנגדת לאות היומי — גודל מוקטן ל-40%",
+      });
+    }
+  }
+
   const volMult = subs.find((s) => s.id === "vol")!.convictionMult;
-  const conviction = clip(Math.abs(score) * volMult, 0, 1);
+  const conviction = clip(Math.abs(score) * volMult * htfMult, 0, 1);
   const direction: -1 | 0 | 1 = score > FLAT_BAND ? 1 : score < -FLAT_BAND ? -1 : 0;
 
   // vol targeting: aim the position's annualized vol at cfg.targetVol
