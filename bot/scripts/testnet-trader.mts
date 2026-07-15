@@ -47,11 +47,23 @@ function writeOut(actions: Action[]) {
 }
 
 async function main() {
-  const key = process.env.BINANCE_TESTNET_KEY;
-  const secret = process.env.BINANCE_TESTNET_SECRET;
+  const key = (process.env.BINANCE_TESTNET_KEY ?? "").trim();
+  const secret = (process.env.BINANCE_TESTNET_SECRET ?? "").trim();
   if (!key || !secret) {
     status.push(
       "⚠️ אין מפתחות Testnet מוגדרים (Secrets בשם BINANCE_TESTNET_KEY / BINANCE_TESTNET_SECRET) — הבוט לא סוחר.",
+    );
+    writeOut([]);
+    return;
+  }
+  // Binance keys are plain base62; a stray non-ASCII character (e.g. a
+  // Cyrillic В that looks like B) is a copy-paste error, not a key.
+  const keyShape = /^[A-Za-z0-9]{10,}$/;
+  if (!keyShape.test(key) || !keyShape.test(secret)) {
+    const which = !keyShape.test(key) ? "BINANCE_TESTNET_KEY" : "BINANCE_TESTNET_SECRET";
+    const bad = (!keyShape.test(key) ? key : secret).split("").findIndex((c) => !/[A-Za-z0-9]/.test(c));
+    status.push(
+      `⚠️ המפתח ${which} מכיל תו לא חוקי (במיקום ${bad + 1}) — כנראה שגיאת העתקה. צור מפתח חדש ב-testnet.binance.vision, העתק בכפתור ההעתקה והדבק מחדש ב-Secret.`,
     );
     writeOut([]);
     return;
