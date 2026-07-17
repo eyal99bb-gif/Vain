@@ -2,7 +2,7 @@ name: Deploy trading bot to GitHub Pages
 
 on:
   push:
-    branches: [claude/install-ui-ux-skill-PRGJd]
+    branches: [claude/markov-2-hedge-fund-install-eiej5t]
     paths:
       - "bot/**"
       - ".github/workflows/deploy-bot.yml"

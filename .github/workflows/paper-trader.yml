@@ -1,8 +1,8 @@
-name: Testnet auto-trader
+name: Paper auto-trader (Alpaca)
 
 on:
   schedule:
-    - cron: "17,47 * * * *"
+    - cron: "9,39 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: testnet-trader
+  group: paper-trader
   cancel-in-progress: false
 
 jobs:
@@ -30,11 +30,11 @@ jobs:
 
       - run: npm ci
 
-      - name: Trade on the Binance SPOT TESTNET (fake money only)
+      - name: Trade on the Alpaca PAPER account (fake money only)
         env:
-          BINANCE_TESTNET_KEY: ${{ secrets.BINANCE_TESTNET_KEY }}
-          BINANCE_TESTNET_SECRET: ${{ secrets.BINANCE_TESTNET_SECRET }}
-        run: npx tsx scripts/testnet-trader.mts
+          ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
+          ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+        run: npx tsx scripts/paper-trader.mts
 
       - name: Update the heartbeat status issue (no notifications)
         if: always()
@@ -42,15 +42,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           [ -f status.json ] || exit 0
-          title="📊 מצב הבוט (Testnet)"
+          title="📊 מצב הבוט (מסחר מדומה)"
           num=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "📊 in:title" --json number --jq '.[0].number')
           if [ -z "$num" ]; then
-            url=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "מתעדכן אוטומטית בכל ריצה (~30 דק'). התראות נשלחות רק על עסקאות שבוצעו — כאן רואים שהבוט חי גם כשהוא בוחר לא לסחור.")
+            url=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "מתעדכן אוטומטית בכל ריצה (~30 דק'). התראות נשלחות רק על עסקאות שבוצעו.")
             num=$(basename "$url")
           fi
           ts=$(jq -r '.updatedAt' status.json)
-          body=$(printf "**עדכון אחרון:** %s (UTC)\n\n%s\n\n---\n_מתעדכן כל ~30 דק'. Testnet = כסף מדומה בלבד._" "$ts" "$(jq -r '.lines[]' status.json)")
-          gh issue edit "$num" --repo "$GITHUB_REPOSITORY" --body "$body"
+          body=$(printf "**עדכון אחרון:** %s (UTC)\n\n%s\n\n---\n_מתעדכן כל ~30 דק'. חשבון Paper של Alpaca = כסף מדומה בלבד._" "$ts" "$(jq -r '.lines[]' status.json)")
+          gh issue edit "$num" --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
 
       - name: Post executed orders to the journal issue
         env:
@@ -58,11 +58,11 @@ jobs:
         run: |
           count=$(jq length actions.json)
           if [ "$count" -eq 0 ]; then echo "no orders"; exit 0; fi
-          title="📒 יומן מסחר Testnet"
+          title="📒 יומן מסחר מדומה"
           num=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "📒 in:title" --json number --jq '.[0].number')
           if [ -z "$num" ]; then
             url=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
-              --body "@eyal99bb-gif כאן הבוט מתעד כל פעולה אוטומטית ב-Testnet (כסף מדומה בלבד). כל תגובה חדשה = פעולה שבוצעה.")
+              --body "@eyal99bb-gif כאן הבוט מתעד כל פעולה אוטומטית בחשבון המדומה (Alpaca Paper). כל תגובה חדשה = פעולה שבוצעה.")
             num=$(basename "$url")
           fi
           body=$(jq -r '.[].line' actions.json)
