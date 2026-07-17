@@ -1,34 +1,27 @@
-// Alpaca PAPER auto-trader — runs on GitHub Actions every 30 min.
-// FAKE MONEY ONLY: the endpoint is hard-coded to paper-api.alpaca.markets
-// AND the key must be a paper key (starts with PK). Strategy: follow the
-// ensemble signal long-only per crypto asset, sized by the same
-// kelly-capped fraction the dashboard shows, rebalancing only when the
-// drift exceeds 5% of equity. No signal / no measured edge → flat.
-//
-// Outputs: actions.json (executed orders → journal issue comments, which
-// notify) and status.json (the heartbeat, always written).
+// Alpaca PAPER auto-trader — GitHub Actions, every ~30 min. FAKE MONEY ONLY
+// (paper endpoint hard-coded + PK-key gate). v2 upgrades:
+//   • 10-crypto universe (long-only) + SPY/QQQ stocks (long AND short)
+//   • per-asset cap 25% of equity; buys bounded by free cash
+//   • BTC-leader filter: alt longs halved while BTC signals bear
+//   • exchange-resting stop orders refreshed every cycle (gap protection)
+//   • kelly-capped sizing, 5% rebalance band — unchanged
+// Outputs: actions.json (orders → journal comments) + status.json (heartbeat).
 
 import { writeFileSync } from "node:fs";
-import { analyze } from "../src/lib/quant/analyze";
+import { analyze, type Analysis } from "../src/lib/quant/analyze";
 import { ASSETS } from "../src/lib/quant/config";
 import { fetchSeries } from "../src/lib/quant/fetchClient";
-import { isPaperKey, makeAlpaca } from "../src/lib/quant/alpaca";
+import { fetchStockServer, SERVER_STOCKS } from "../src/lib/quant/fetchServer";
+import { isPaperKey, makeAlpaca, type AlpacaClient } from "../src/lib/quant/alpaca";
 import { longOnlyTarget, rebalanceDelta } from "../src/lib/quant/testnet";
+import type { PriceSeries } from "../src/lib/quant/types";
 
 const MIN_CONVICTION = 0.35;
 const MIN_NOTIONAL_USD = 10;
+const PER_ASSET_CAP = 0.25;
 
-// dashboard asset id → Alpaca order symbol / position symbol
-const ORDER_SYMBOL: Record<string, string> = {
-  BTC: "BTC/USD",
-  ETH: "ETH/USD",
-  SOL: "SOL/USD",
-};
-const POS_SYMBOL: Record<string, string> = {
-  BTC: "BTCUSD",
-  ETH: "ETHUSD",
-  SOL: "SOLUSD",
-};
+const orderSymbol = (id: string, kind: string) => (kind === "crypto" ? `${id}/USD` : id);
+const posSymbol = (id: string, kind: string) => (kind === "crypto" ? `${id}USD` : id);
 
 interface Action {
   line: string;
@@ -36,6 +29,7 @@ interface Action {
 
 const status: string[] = [];
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
+const usd = (x: number) => `$${x.toFixed(0)}`;
 
 function writeOut(actions: Action[]) {
   writeFileSync("actions.json", JSON.stringify(actions, null, 2));
@@ -46,12 +40,29 @@ function writeOut(actions: Action[]) {
   for (const l of status) console.log(l);
 }
 
+async function cancelOurStops(client: AlpacaClient, ourSymbols: Set<string>) {
+  const open = (await client.get("/v2/orders?status=open&limit=500")) as Array<{
+    id: string;
+    symbol: string;
+    type: string;
+  }>;
+  for (const o of open) {
+    if (o.type.includes("stop") && ourSymbols.has(o.symbol.replace("/", ""))) {
+      try {
+        await client.del(`/v2/orders/${o.id}`);
+      } catch {
+        /* already filled/canceled */
+      }
+    }
+  }
+}
+
 async function main() {
   const key = (process.env.ALPACA_KEY ?? "").trim();
   const secret = (process.env.ALPACA_SECRET ?? "").trim();
   if (!key || !secret) {
     status.push(
-      "⚠️ אין מפתחות Alpaca מוגדרים (Secrets בשם ALPACA_KEY / ALPACA_SECRET) — הבוט לא סוחר. הרשמה חינם: alpaca.markets → Paper Trading → API Keys.",
+      "⚠️ אין מפתחות Alpaca מוגדרים (Secrets בשם ALPACA_KEY / ALPACA_SECRET) — הבוט לא סוחר.",
     );
     writeOut([]);
     return;
@@ -70,7 +81,7 @@ async function main() {
   }
   if (!isPaperKey(key)) {
     status.push(
-      "🛑 המפתח שהוזן אינו מפתח Paper (מפתחות מדומים מתחילים ב-PK). הבוט מסרב לגעת בחשבון אמיתי — צור מפתח מסביבת ה-Paper Trading בלבד.",
+      "🛑 המפתח שהוזן אינו מפתח Paper (מפתחות מדומים מתחילים ב-PK). הבוט מסרב לגעת בחשבון אמיתי.",
     );
     writeOut([]);
     return;
@@ -79,8 +90,7 @@ async function main() {
   const client = makeAlpaca(key, secret);
   const actions: Action[] = [];
 
-  // 🧪 one-shot pipeline test: buy $10 of BTC, confirm the position exists,
-  // close it immediately. Proves keys, orders, fills, journal + alerts.
+  // 🧪 one-shot pipeline test
   if (process.env.TEST_TRADE === "true") {
     await client.post("/v2/orders", {
       symbol: "BTC/USD",
@@ -96,25 +106,32 @@ async function main() {
         const pos = (await client.get("/v2/positions/BTCUSD")) as { qty: string };
         filled = parseFloat(pos.qty) > 0;
       } catch {
-        /* position not visible yet */
+        /* not visible yet */
       }
     }
-    if (!filled) throw new Error("test buy did not fill within 30s — check the Orders page on Alpaca");
+    if (!filled) throw new Error("test buy did not fill within 30s");
     await client.del("/v2/positions/BTCUSD");
-    const line1 = "🧪 עסקת ניסיון: קנייה של $10 ביטקוין — בוצעה ואושרה";
-    const line2 = "🧪 עסקת ניסיון: הפוזיציה נסגרה מיד — סיבוב מלא הושלם. צינור הביצוע עובד! ✅";
-    actions.push({ line: line1 }, { line: line2 });
-    status.push(line1, line2);
+    const l1 = "🧪 עסקת ניסיון: קנייה של $10 ביטקוין — בוצעה ואושרה";
+    const l2 = "🧪 עסקת ניסיון: הפוזיציה נסגרה — צינור הביצוע עובד! ✅";
+    actions.push({ line: l1 }, { line: l2 });
+    status.push(l1, l2);
     writeOut(actions);
     return;
   }
 
-  const cryptos = ASSETS.filter((a) => a.kind === "crypto" && ORDER_SYMBOL[a.id]);
-
-  const seriesMap = new Map<string, Awaited<ReturnType<typeof fetchSeries>>>();
-  for (const a of cryptos) {
-    const s = await fetchSeries(a.id, "1d");
-    if (s.source !== "fixture") seriesMap.set(a.id, s);
+  // ── market data: crypto from Binance, stocks from stooq/yahoo ──
+  const universe = ASSETS.filter(
+    (a) => (a.kind === "crypto" && a.binance) || SERVER_STOCKS.includes(a.id),
+  );
+  const seriesMap = new Map<string, PriceSeries>();
+  for (const a of universe) {
+    try {
+      const s =
+        a.kind === "crypto" ? await fetchSeries(a.id, "1d") : await fetchStockServer(a.id, "1d");
+      if (s.source !== "fixture") seriesMap.set(a.id, s);
+    } catch {
+      status.push(`▫️ ${a.id}: אין נתונים חיים בסבב הזה`);
+    }
   }
   if (seriesMap.size === 0) {
     status.push("⚠️ אין נתוני שוק חיים כרגע — הבוט לא סוחר בסבב הזה.");
@@ -129,78 +146,167 @@ async function main() {
 
   const positions = (await client.get("/v2/positions")) as Array<{
     symbol: string;
-    market_value: string;
+    qty: string;
   }>;
-  const posValue = new Map(positions.map((p) => [p.symbol, parseFloat(p.market_value)]));
+  const posQty = new Map(positions.map((p) => [p.symbol, parseFloat(p.qty)]));
+  const price = new Map<string, number>();
+  for (const [id, s] of seriesMap) price.set(id, s.candles[s.candles.length - 1].c);
 
-  status.push(
-    `💼 שווי תיק מדומה (Alpaca Paper): ~$${equity.toFixed(0)} (מזומן פנוי: $${cash.toFixed(0)})`,
-  );
+  status.push(`💼 שווי תיק מדומה (Alpaca Paper): ~${usd(equity)} (מזומן פנוי: ${usd(cash)})`);
 
-  for (const a of cryptos) {
+  // clear old resting stops before rebalancing (avoid qty reservations)
+  const ourSyms = new Set(universe.map((a) => posSymbol(a.id, a.kind)));
+  await cancelOurStops(client, ourSyms);
+
+  // BTC leads the crypto market: analyze everything, read BTC first
+  const analyses = new Map<string, Analysis>();
+  for (const a of universe) {
     const s = seriesMap.get(a.id);
-    if (!s) {
-      status.push(`▫️ ${a.id}: אין נתונים חיים בסבב הזה`);
-      continue;
-    }
-    const an = analyze(s, equity);
-    const e = an.ensemble;
+    if (s) analyses.set(a.id, analyze(s, equity));
+  }
+  const btcDir = analyses.get("BTC")?.ensemble.direction ?? 0;
 
+  interface StopPlan {
+    a: (typeof universe)[number];
+    qty: number;
+    stop: number;
+  }
+  const stopPlans: StopPlan[] = [];
+
+  for (const a of universe) {
+    const an = analyses.get(a.id);
+    const p = price.get(a.id);
+    if (!an || !p) continue;
+    const e = an.ensemble;
+    const sym = posSymbol(a.id, a.kind);
+    const qty = posQty.get(sym) ?? 0;
     const strong = e.conviction >= MIN_CONVICTION && an.kelly.half > 0;
-    const target = strong ? longOnlyTarget(e.direction, e.positionFrac) : 0;
-    const curVal = posValue.get(POS_SYMBOL[a.id]) ?? 0;
-    const curFrac = curVal / equity;
+
+    let target = 0;
+    let leaderNote = "";
+    if (strong) {
+      if (a.kind === "crypto") {
+        target = longOnlyTarget(e.direction, e.positionFrac);
+        if (a.id !== "BTC" && btcDir < 0 && target > 0) {
+          target *= 0.5;
+          leaderNote = " (חצי גודל — ביטקוין דובי)";
+        }
+      } else {
+        target = e.direction * Math.abs(e.positionFrac); // stocks: shorts allowed
+      }
+    }
+    target = Math.max(-PER_ASSET_CAP, Math.min(PER_ASSET_CAP, target));
+
+    const curFrac = (qty * p) / equity;
     const delta = rebalanceDelta(target, curFrac);
 
     const why =
       e.direction < 0
-        ? "אות שורט — גרסת הקריפטו לונג בלבד, נשארים בחוץ"
+        ? a.kind === "crypto"
+          ? "אות שורט — קריפטו לונג בלבד, נשארים בחוץ"
+          : strong
+            ? `אות שורט, יעד ${pct(Math.abs(target))} בחסר`
+            : "אות שורט חלש — בחוץ"
         : e.direction === 0
           ? "אין אות כיווני"
           : !strong
             ? `אות לונג אבל ${e.conviction < MIN_CONVICTION ? `הביטחון נמוך (${pct(e.conviction)})` : "אין יתרון מדוד (קלי 0)"}`
-            : `אות לונג, יעד ${pct(target)}`;
+            : `אות לונג, יעד ${pct(target)}${leaderNote}`;
 
     if (delta === 0) {
       status.push(
-        `▫️ ${a.id}: מוחזק ${pct(curFrac)} | ${why}${target > 0 ? " — בתוך רצועת האיזון, אין פעולה" : ""}`,
+        `▫️ ${a.id}: מוחזק ${pct(curFrac)} | ${why}${target !== 0 ? " — בתוך רצועת האיזון" : ""}`,
       );
-      continue;
+    } else if (a.kind === "crypto") {
+      if (delta > 0) {
+        const notional = Math.min(delta * equity, cash);
+        if (notional >= MIN_NOTIONAL_USD) {
+          await client.post("/v2/orders", {
+            symbol: orderSymbol(a.id, a.kind),
+            notional: notional.toFixed(2),
+            side: "buy",
+            type: "market",
+            time_in_force: "gtc",
+          });
+          cash -= notional;
+          posQty.set(sym, qty + notional / p);
+          const line = `🟢 קנייה (מדומה): ${a.id} ב-${usd(notional)} — יעד ${pct(target)}${leaderNote} (ביטחון ${pct(e.conviction)})`;
+          actions.push({ line });
+          status.push(line);
+        } else status.push(`▫️ ${a.id}: ${why} — הפער קטן מהמינימום`);
+      } else {
+        const notional = Math.min(-delta * equity, qty * p);
+        if (notional >= MIN_NOTIONAL_USD) {
+          await client.post("/v2/orders", {
+            symbol: orderSymbol(a.id, a.kind),
+            notional: notional.toFixed(2),
+            side: "sell",
+            type: "market",
+            time_in_force: "gtc",
+          });
+          cash += notional;
+          posQty.set(sym, qty - notional / p);
+          const line = `🔴 מכירה (מדומה): ${a.id} ב-${usd(notional)} — ${target === 0 ? `יציאה: ${why}` : `הקטנה ליעד ${pct(target)}`}`;
+          actions.push({ line });
+          status.push(line);
+        } else status.push(`▫️ ${a.id}: מוחזק ${pct(curFrac)} | הפער קטן מהמינימום`);
+      }
+    } else {
+      // stocks: whole shares, long or short, day orders (queued off-hours)
+      const shares = Math.floor((Math.abs(delta) * equity) / p);
+      if (shares < 1) {
+        status.push(`▫️ ${a.id}: ${why} — הפער קטן ממניה אחת`);
+      } else {
+        await client.post("/v2/orders", {
+          symbol: a.id,
+          qty: String(shares),
+          side: delta > 0 ? "buy" : "sell",
+          type: "market",
+          time_in_force: "day",
+        });
+        posQty.set(sym, qty + (delta > 0 ? shares : -shares));
+        const line = `${delta > 0 ? "🟢 קנייה" : "🔴 מכירה/שורט"} (מדומה): ${shares} מניות ${a.id} (~${usd(shares * p)}) — ${why}`;
+        actions.push({ line });
+        status.push(line);
+      }
     }
 
-    if (delta > 0) {
-      const notional = Math.min(delta * equity, cash);
-      if (notional < MIN_NOTIONAL_USD) {
-        status.push(`▫️ ${a.id}: ${why} — הפער קטן מהמינימום, אין פעולה`);
-        continue;
+    // plan a fresh resting stop for whatever we now hold
+    const newQty = posQty.get(sym) ?? 0;
+    if (newQty !== 0 && e.stop !== null && Math.abs(newQty * p) >= MIN_NOTIONAL_USD) {
+      stopPlans.push({ a, qty: newQty, stop: e.stop });
+    }
+  }
+
+  // ── resting stops on the exchange: protection even between cycles ──
+  for (const sp of stopPlans) {
+    try {
+      const crypto = sp.a.kind === "crypto";
+      const long = sp.qty > 0;
+      const stopPx = sp.stop;
+      if (crypto) {
+        await client.post("/v2/orders", {
+          symbol: orderSymbol(sp.a.id, sp.a.kind),
+          qty: Math.abs(sp.qty).toFixed(6),
+          side: "sell",
+          type: "stop_limit",
+          stop_price: stopPx.toFixed(2),
+          limit_price: (stopPx * 0.995).toFixed(2),
+          time_in_force: "gtc",
+        });
+      } else {
+        await client.post("/v2/orders", {
+          symbol: sp.a.id,
+          qty: String(Math.floor(Math.abs(sp.qty))),
+          side: long ? "sell" : "buy",
+          type: "stop",
+          stop_price: stopPx.toFixed(2),
+          time_in_force: "gtc",
+        });
       }
-      await client.post("/v2/orders", {
-        symbol: ORDER_SYMBOL[a.id],
-        notional: notional.toFixed(2),
-        side: "buy",
-        type: "market",
-        time_in_force: "gtc",
-      });
-      cash -= notional;
-      const line = `🟢 קנייה (מדומה): ${a.id} ב-$${notional.toFixed(0)} — יעד ${pct(target)} מהתיק (ביטחון ${pct(e.conviction)}, קלי ${pct(an.kelly.half)})`;
-      actions.push({ line });
-      status.push(line);
-    } else {
-      const notional = Math.min(-delta * equity, curVal);
-      if (notional < MIN_NOTIONAL_USD) {
-        status.push(`▫️ ${a.id}: מוחזק ${pct(curFrac)} | הפער קטן מהמינימום, אין פעולה`);
-        continue;
-      }
-      await client.post("/v2/orders", {
-        symbol: ORDER_SYMBOL[a.id],
-        notional: notional.toFixed(2),
-        side: "sell",
-        type: "market",
-        time_in_force: "gtc",
-      });
-      const line = `🔴 מכירה (מדומה): ${a.id} ב-$${notional.toFixed(0)} — ${target === 0 ? `יציאה: ${why}` : `הקטנה ליעד ${pct(target)}`}`;
-      actions.push({ line });
-      status.push(line);
+      status.push(`🛡 ${sp.a.id}: סטופ מוגן בבורסה ב-${usd(stopPx)}`);
+    } catch (err) {
+      status.push(`▫️ ${sp.a.id}: לא הצלחתי להציב סטופ בבורסה (${String(err).slice(0, 80)})`);
     }
   }
 

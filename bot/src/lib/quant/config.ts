@@ -17,6 +17,13 @@ export const ASSETS: AssetDef[] = [
   { id: "BTC", label: "ביטקוין", kind: "crypto", binance: "BTCUSDT" },
   { id: "ETH", label: "את'ריום", kind: "crypto", binance: "ETHUSDT" },
   { id: "SOL", label: "סולאנה", kind: "crypto", binance: "SOLUSDT" },
+  { id: "DOGE", label: "דוג'קוין", kind: "crypto", binance: "DOGEUSDT" },
+  { id: "AVAX", label: "אבלנץ'", kind: "crypto", binance: "AVAXUSDT" },
+  { id: "LINK", label: "צ'יינלינק", kind: "crypto", binance: "LINKUSDT" },
+  { id: "LTC", label: "לייטקוין", kind: "crypto", binance: "LTCUSDT" },
+  { id: "UNI", label: "יוניסוואפ", kind: "crypto", binance: "UNIUSDT" },
+  { id: "DOT", label: "פולקדוט", kind: "crypto", binance: "DOTUSDT" },
+  { id: "AAVE", label: "אאבה", kind: "crypto", binance: "AAVEUSDT" },
   { id: "SPY", label: "S&P 500 (SPY)", kind: "stock", stooq: "spy.us", yahoo: "SPY" },
   { id: "QQQ", label: "נאסד\"ק 100 (QQQ)", kind: "stock", stooq: "qqq.us", yahoo: "QQQ" },
 ];

@@ -18,6 +18,13 @@ const COINGECKO_IDS: Record<string, string> = {
   BTC: "bitcoin",
   ETH: "ethereum",
   SOL: "solana",
+  DOGE: "dogecoin",
+  AVAX: "avalanche-2",
+  LINK: "chainlink",
+  LTC: "litecoin",
+  UNI: "uniswap",
+  DOT: "polkadot",
+  AAVE: "aave",
 };
 
 async function getJson(url: string): Promise<unknown> {

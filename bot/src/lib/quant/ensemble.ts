@@ -1,3 +1,4 @@
+import { clusterSignal } from "./cluster";
 import { realizedVol } from "./indicators";
 import { resample } from "./resample";
 import {
@@ -33,6 +34,7 @@ export function ensembleAt(
     momentumSignal(closes, upto, cfg),
     trendSignal(closes, upto, cfg),
     meanRevSignal(closes, upto, cfg),
+    clusterSignal(candles, upto, cfg),
     volSignal(closes, upto, cfg),
   ];
   const directional = subs.filter((s) => s.id !== "vol");

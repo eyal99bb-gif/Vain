@@ -9,6 +9,7 @@ import { writeFileSync } from "node:fs";
 import { analyze } from "../src/lib/quant/analyze";
 import { ASSETS } from "../src/lib/quant/config";
 import { fetchSeries } from "../src/lib/quant/fetchClient";
+import { fetchStockServer, SERVER_STOCKS } from "../src/lib/quant/fetchServer";
 import type { Interval } from "../src/lib/quant/types";
 
 const INTERVALS: Interval[] = ["1h", "1d"];
@@ -27,10 +28,17 @@ async function main() {
   const alerts: Alert[] = [];
   const skipped: string[] = [];
 
-  for (const asset of ASSETS.filter((a) => a.kind === "crypto")) {
-    for (const interval of INTERVALS) {
+  const scannable = ASSETS.filter(
+    (a) => a.kind === "crypto" || SERVER_STOCKS.includes(a.id),
+  );
+  for (const asset of scannable) {
+    const intervals = asset.kind === "crypto" ? INTERVALS : (["1d"] as Interval[]);
+    for (const interval of intervals) {
       try {
-        const series = await fetchSeries(asset.id, interval);
+        const series =
+          asset.kind === "crypto"
+            ? await fetchSeries(asset.id, interval)
+            : await fetchStockServer(asset.id, interval);
         if (series.source === "fixture") {
           skipped.push(`${asset.id}/${interval}: no live data`);
           continue;
