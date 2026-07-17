@@ -18,6 +18,7 @@ import { kellyFraction } from "../risk";
 import { EXIT, exitState } from "../exits";
 import { compareExitStyles } from "../tradeBacktest";
 import { hmacSign, longOnlyTarget, rebalanceDelta, roundStep, TESTNET_BASE } from "../testnet";
+import { ALPACA_PAPER_BASE, isPaperKey } from "../alpaca";
 import { resample } from "../resample";
 import { walkForward } from "../backtest";
 
@@ -221,6 +222,10 @@ const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
   const sig = hmacSign("secret", "a=1&b=2");
   assert(sig.length === 64 && sig === hmacSign("secret", "a=1&b=2"),
     "HMAC signature is deterministic 64-hex");
+  assert(ALPACA_PAPER_BASE === "https://paper-api.alpaca.markets",
+    "Alpaca endpoint is hard-coded to the PAPER environment");
+  assert(isPaperKey("PKABC123") && !isPaperKey("AKABC123"),
+    "live Alpaca keys (AK...) are rejected, only paper keys (PK...) pass");
 }
 
 console.log(`\nAll ${passed} checks passed.`);
