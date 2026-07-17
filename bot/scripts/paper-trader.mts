@@ -19,6 +19,10 @@ import type { PriceSeries } from "../src/lib/quant/types";
 const MIN_CONVICTION = 0.25; // lowered from 0.35 per user request: more trades, more data
 const MIN_NOTIONAL_USD = 10;
 const PER_ASSET_CAP = 0.25;
+// vol-targeted kelly positions are often 3-5% of equity; a 5% rebalance
+// band would suppress opening them entirely. Trade any drift over 1.5%;
+// the $10 notional minimum is the real dust filter.
+const REBALANCE_BAND = 0.015;
 
 const orderSymbol = (id: string, kind: string) => (kind === "crypto" ? `${id}/USD` : id);
 const posSymbol = (id: string, kind: string) => (kind === "crypto" ? `${id}USD` : id);
@@ -198,7 +202,7 @@ async function main() {
     target = Math.max(-PER_ASSET_CAP, Math.min(PER_ASSET_CAP, target));
 
     const curFrac = (qty * p) / equity;
-    const delta = rebalanceDelta(target, curFrac);
+    const delta = rebalanceDelta(target, curFrac, REBALANCE_BAND);
 
     const why =
       e.direction < 0
