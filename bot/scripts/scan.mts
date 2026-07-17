@@ -50,6 +50,7 @@ async function main() {
         if (!worthwhile) continue;
 
         const dirHe = e.direction > 0 ? "לונג" : "שורט";
+        const autoTradeable = asset.kind === "stock" || e.direction > 0;
         alerts.push({
           key: `${asset.id}-${interval}-${dirHe}`,
           title: `🔔 אות מסחר: ${asset.id} ${dirHe} (${intervalHe(interval)})`,
@@ -63,6 +64,10 @@ async function main() {
             `- הסתברות היסטורית: ${(a.hitRate.rate * 100).toFixed(0)}% (טווח ${(a.hitRate.lo * 100).toFixed(0)}%–${(a.hitRate.hi * 100).toFixed(0)}%, על ${a.hitRate.n} מקרים)`,
             `- גודל מוצע (חצי-קלי): ${(Math.abs(e.positionFrac) * 100).toFixed(0)}% מהתיק`,
             e.stop !== null ? `- סטופ מוצע: $${fmt(e.stop)}` : ``,
+            ``,
+            autoTradeable
+              ? `🤖 **הבוט יסחר על האות הזה אוטומטית** אם הוא יעמוד ברף בריצה הקרובה — תקבל התראה נפרדת מהיומן על הביצוע.`
+              : `ℹ️ **התראת מידע בלבד** — הבוט לא יסחור על זה (שורט בקריפטו אינו אפשרי בחשבון spot). האות מוצג כי הוא איכותי וייתכן שתרצה לפעול עליו ידנית.`,
             ``,
             `[פתח את הדשבורד](https://eyal99bb-gif.github.io/Vain/) לניתוח המלא ולתוכנית הפעולה.`,
             ``,
