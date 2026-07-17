@@ -55,7 +55,7 @@ export interface EngineConfig {
 }
 
 export interface SubSignal {
-  id: "markov" | "momentum" | "trend" | "meanrev" | "vol" | "htf";
+  id: "markov" | "momentum" | "trend" | "meanrev" | "vol" | "htf" | "cluster";
   name: string; // Hebrew display name
   /** directional vote in [-1, +1]; the vol signal always votes 0 */
   vote: number;
