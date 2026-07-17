@@ -16,7 +16,7 @@ import { isPaperKey, makeAlpaca, type AlpacaClient } from "../src/lib/quant/alpa
 import { longOnlyTarget, rebalanceDelta } from "../src/lib/quant/testnet";
 import type { PriceSeries } from "../src/lib/quant/types";
 
-const MIN_CONVICTION = 0.35;
+const MIN_CONVICTION = 0.25; // lowered from 0.35 per user request: more trades, more data
 const MIN_NOTIONAL_USD = 10;
 const PER_ASSET_CAP = 0.25;
 
