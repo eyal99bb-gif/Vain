@@ -78,6 +78,37 @@ async function main() {
 
   const client = makeAlpaca(key, secret);
   const actions: Action[] = [];
+
+  // 🧪 one-shot pipeline test: buy $10 of BTC, confirm the position exists,
+  // close it immediately. Proves keys, orders, fills, journal + alerts.
+  if (process.env.TEST_TRADE === "true") {
+    await client.post("/v2/orders", {
+      symbol: "BTC/USD",
+      notional: "10",
+      side: "buy",
+      type: "market",
+      time_in_force: "gtc",
+    });
+    let filled = false;
+    for (let i = 0; i < 10 && !filled; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        const pos = (await client.get("/v2/positions/BTCUSD")) as { qty: string };
+        filled = parseFloat(pos.qty) > 0;
+      } catch {
+        /* position not visible yet */
+      }
+    }
+    if (!filled) throw new Error("test buy did not fill within 30s — check the Orders page on Alpaca");
+    await client.del("/v2/positions/BTCUSD");
+    const line1 = "🧪 עסקת ניסיון: קנייה של $10 ביטקוין — בוצעה ואושרה";
+    const line2 = "🧪 עסקת ניסיון: הפוזיציה נסגרה מיד — סיבוב מלא הושלם. צינור הביצוע עובד! ✅";
+    actions.push({ line: line1 }, { line: line2 });
+    status.push(line1, line2);
+    writeOut(actions);
+    return;
+  }
+
   const cryptos = ASSETS.filter((a) => a.kind === "crypto" && ORDER_SYMBOL[a.id]);
 
   const seriesMap = new Map<string, Awaited<ReturnType<typeof fetchSeries>>>();

@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "9,39 * * * *"
   workflow_dispatch:
+    inputs:
+      test_trade:
+        description: "עסקת ניסיון: קנה ומכור $10 ביטקוין לבדיקת הצינור"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,6 +39,7 @@ jobs:
         env:
           ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
           ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+          TEST_TRADE: ${{ inputs.test_trade }}
         run: npx tsx scripts/paper-trader.mts
 
       - name: Update the heartbeat status issue (no notifications)

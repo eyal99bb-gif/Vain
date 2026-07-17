@@ -13,11 +13,12 @@ export function isPaperKey(keyId: string): boolean {
 export interface AlpacaClient {
   get: (path: string) => Promise<unknown>;
   post: (path: string, body: Record<string, string>) => Promise<unknown>;
+  del: (path: string) => Promise<unknown>;
 }
 
 export function makeAlpaca(keyId: string, secret: string): AlpacaClient {
   const call = async (
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "DELETE",
     path: string,
     body?: Record<string, string>,
   ): Promise<unknown> => {
@@ -38,5 +39,6 @@ export function makeAlpaca(keyId: string, secret: string): AlpacaClient {
   return {
     get: (path) => call("GET", path),
     post: (path, body) => call("POST", path, body),
+    del: (path) => call("DELETE", path),
   };
 }
