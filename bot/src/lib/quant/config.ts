@@ -11,6 +11,8 @@ export interface AssetDef {
   stooq?: string;
   /** Yahoo symbol (stocks fallback) */
   yahoo?: string;
+  /** never take a short position (e.g. an inverse ETF proxy) */
+  longOnly?: boolean;
 }
 
 export const ASSETS: AssetDef[] = [
@@ -26,6 +28,17 @@ export const ASSETS: AssetDef[] = [
   { id: "AAVE", label: "אאבה", kind: "crypto", binance: "AAVEUSDT" },
   { id: "SPY", label: "S&P 500 (SPY)", kind: "stock", stooq: "spy.us", yahoo: "SPY" },
   { id: "QQQ", label: "נאסד\"ק 100 (QQQ)", kind: "stock", stooq: "qqq.us", yahoo: "QQQ" },
+  // BITI = ProShares Short Bitcoin ETF (1x inverse). Rises when BTC falls, so
+  // buying it long is a synthetic short on bitcoin. Long-only: we buy it to bet
+  // against BTC, never short it (that would be a leveraged/decayed long-BTC bet).
+  {
+    id: "BITI",
+    label: "שורט ביטקוין (BITI)",
+    kind: "stock",
+    stooq: "biti.us",
+    yahoo: "BITI",
+    longOnly: true,
+  },
 ];
 
 /**

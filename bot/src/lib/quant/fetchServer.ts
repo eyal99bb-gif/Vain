@@ -5,8 +5,8 @@
 import { resample } from "./resample";
 import type { Candle, Interval, PriceSeries } from "./types";
 
-const STOOQ: Record<string, string> = { SPY: "spy.us", QQQ: "qqq.us" };
-const YAHOO: Record<string, string> = { SPY: "SPY", QQQ: "QQQ" };
+const STOOQ: Record<string, string> = { SPY: "spy.us", QQQ: "qqq.us", BITI: "biti.us" };
+const YAHOO: Record<string, string> = { SPY: "SPY", QQQ: "QQQ", BITI: "BITI" };
 
 async function text(url: string): Promise<string> {
   const res = await fetch(url, {

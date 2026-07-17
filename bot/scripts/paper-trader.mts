@@ -195,6 +195,8 @@ async function main() {
           target *= 0.5;
           leaderNote = " (חצי גודל — ביטקוין דובי)";
         }
+      } else if (a.longOnly) {
+        target = longOnlyTarget(e.direction, e.positionFrac); // inverse-ETF proxy: buy only
       } else {
         target = e.direction * Math.abs(e.positionFrac); // stocks: shorts allowed
       }
@@ -208,9 +210,11 @@ async function main() {
       e.direction < 0
         ? a.kind === "crypto"
           ? "אות שורט — קריפטו לונג בלבד, נשארים בחוץ"
-          : strong
-            ? `אות שורט, יעד ${pct(Math.abs(target))} בחסר`
-            : "אות שורט חלש — בחוץ"
+          : a.longOnly
+            ? "אות שורט — נכס לונג-בלבד, נשארים בחוץ"
+            : strong
+              ? `אות שורט, יעד ${pct(Math.abs(target))} בחסר`
+              : "אות שורט חלש — בחוץ"
         : e.direction === 0
           ? "אין אות כיווני"
           : !strong
