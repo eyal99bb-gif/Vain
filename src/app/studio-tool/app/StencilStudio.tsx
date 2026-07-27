@@ -227,7 +227,7 @@ export default function StencilStudio() {
   }, [fileName]);
 
   return (
-    <div dir="ltr" className="min-h-screen bg-stone-950 font-sans text-stone-200">
+    <div dir="ltr" className="min-h-screen bg-stone-950 font-sans text-stone-200 selection:bg-violet-600/40">
       <header className="sticky top-0 z-40 border-b border-white/5 bg-stone-950/80 backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <a href="/studio-tool" className="flex items-center gap-2.5">
@@ -239,7 +239,7 @@ export default function StencilStudio() {
               Vain&rsquo;s Studio Tool
             </span>
           </a>
-          <a href="/studio-tool" className="text-sm text-stone-400 transition-colors hover:text-stone-100">
+          <a href="/studio-tool" className="cursor-pointer text-sm text-stone-400 transition-colors duration-200 hover:text-stone-100">
             ← Back to site
           </a>
         </nav>
@@ -261,7 +261,7 @@ export default function StencilStudio() {
 
         <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
           {/* controls */}
-          <aside className="space-y-7 rounded-2xl border border-white/5 bg-white/[0.03] p-6 self-start">
+          <aside className="space-y-7 self-start rounded-2xl border border-white/[0.06] bg-gradient-to-b from-white/[0.05] to-white/[0.015] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <div>
               <span className="mb-2 block text-sm font-medium text-stone-200">Extraction mode</span>
               <div className="grid grid-cols-2 gap-2">
@@ -275,7 +275,7 @@ export default function StencilStudio() {
                     key={key}
                     onClick={() => setMode(key)}
                     title={hint}
-                    className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    className={`cursor-pointer rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                       mode === key
                         ? "border-violet-500/60 bg-violet-600/20 text-violet-200"
                         : "border-white/10 text-stone-400 hover:border-white/20 hover:text-stone-200"
@@ -318,7 +318,7 @@ export default function StencilStudio() {
                   <button
                     key={key}
                     onClick={() => setInk(key)}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors ${
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                       ink === key
                         ? "border-violet-500/60 bg-violet-600/20 text-violet-200"
                         : "border-white/10 text-stone-400 hover:border-white/20 hover:text-stone-200"
@@ -337,14 +337,14 @@ export default function StencilStudio() {
             <button
               onClick={download}
               disabled={!sourceData}
-              className="w-full rounded-full bg-violet-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full cursor-pointer rounded-full bg-gradient-to-b from-violet-500 to-violet-700 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_-8px_rgba(124,58,237,0.7),inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-200 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
             >
               Download stencil PNG
             </button>
             {sourceData && (
               <button
                 onClick={() => fileRef.current?.click()}
-                className="w-full rounded-full border border-white/10 py-3 text-sm font-semibold text-stone-300 transition-colors hover:border-violet-500/40 hover:text-white"
+                className="w-full cursor-pointer rounded-full border border-white/10 py-3 text-sm font-semibold text-stone-300 transition-colors duration-200 hover:border-violet-400/40 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
               >
                 Upload a different design
               </button>
@@ -374,7 +374,7 @@ export default function StencilStudio() {
                   const f = e.dataTransfer.files?.[0];
                   if (f) loadFile(f);
                 }}
-                className={`flex aspect-[4/3] w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed transition-colors ${
+                className={`flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                   dragOver
                     ? "border-violet-500/70 bg-violet-600/10"
                     : "border-white/10 bg-white/[0.02] hover:border-violet-500/40"

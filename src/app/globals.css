@@ -18,6 +18,12 @@ body {
   font-family: var(--font-heebo), "Heebo", system-ui, sans-serif;
 }
 
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
