@@ -348,7 +348,7 @@ export default function StudioTool() {
             ))}
           </div>
           <a
-            href="#pricing"
+            href="/studio-tool/app"
             className="rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-500"
           >
             Try it free
@@ -383,7 +383,7 @@ export default function StudioTool() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a
-                href="#pricing"
+                href="/studio-tool/app"
                 className="rounded-full bg-violet-600 px-7 py-3 font-semibold text-white shadow-lg shadow-violet-900/40 transition-colors hover:bg-violet-500"
               >
                 Generate your first stencil
@@ -546,7 +546,7 @@ export default function StudioTool() {
                   ))}
                 </ul>
                 <a
-                  href="#top"
+                  href="/studio-tool/app"
                   className={`mt-8 rounded-full py-3 text-center text-sm font-semibold transition-colors ${
                     plan.featured
                       ? "bg-violet-600 text-white hover:bg-violet-500"
@@ -618,7 +618,7 @@ export default function StudioTool() {
             good — no card, no countdown.
           </p>
           <a
-            href="#pricing"
+            href="/studio-tool/app"
             className="mt-8 inline-block rounded-full bg-violet-600 px-8 py-3.5 font-semibold text-white shadow-lg shadow-violet-900/40 transition-colors hover:bg-violet-500"
           >
             Try Vain&rsquo;s Studio Tool free
