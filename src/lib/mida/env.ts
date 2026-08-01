@@ -3,7 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_IMAGE_MODEL: z.string().default("gemini-2.5-flash-image"),
-  GEMINI_TEXT_MODEL: z.string().default("gemini-2.5-flash"),
+  GEMINI_TEXT_MODEL: z.string().default("gemini-flash-latest"),
   DATABASE_URL: z.string().min(1).optional(),
   S3_ENDPOINT: z.string().min(1).optional(),
   S3_ACCESS_KEY_ID: z.string().min(1).optional(),
