@@ -1,8 +1,7 @@
 // Postgres-backed repos via Drizzle (active when DATABASE_URL is set).
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
-import postgres from "postgres";
-import { midaEnv } from "../../env";
+import { getSql } from "./client";
 import type {
   AvatarStatus,
   FitPreference,
@@ -18,73 +17,9 @@ import type {
 import { midaProducts, midaProfiles, midaTryons } from "./schema";
 import type { Repos } from "./types";
 
-const GLOBAL_KEY = "__midaDrizzle";
-
-type Db = ReturnType<typeof drizzle>;
-type GlobalWithDb = typeof globalThis & {
-  [GLOBAL_KEY]?: { db: Db; ready: Promise<void> };
-};
-
-// Idempotent DDL matching schema.ts, applied on first use so deployments
-// (e.g. Vercel + Neon) work without a manual `drizzle-kit push` step.
-const ENSURE_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS mida_profiles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  uid text NOT NULL UNIQUE,
-  height_cm real,
-  weight_kg real,
-  chest_cm real,
-  waist_cm real,
-  hips_cm real,
-  inseam_cm real,
-  shoulders_cm real,
-  fit_preference text NOT NULL DEFAULT 'regular',
-  photo_keys jsonb NOT NULL DEFAULT '[]',
-  avatar_key text,
-  avatar_status text NOT NULL DEFAULT 'none',
-  avatar_error text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE IF NOT EXISTS mida_products (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  url text NOT NULL,
-  url_hash text NOT NULL UNIQUE,
-  store text NOT NULL,
-  title text NOT NULL,
-  price real,
-  currency text,
-  images jsonb NOT NULL DEFAULT '[]',
-  colors jsonb NOT NULL DEFAULT '[]',
-  garment_type text NOT NULL DEFAULT 'unknown',
-  size_chart jsonb,
-  size_chart_source text NOT NULL DEFAULT 'none',
-  warnings jsonb NOT NULL DEFAULT '[]',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE IF NOT EXISTS mida_tryons (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id uuid NOT NULL REFERENCES mida_profiles(id),
-  product_id uuid NOT NULL REFERENCES mida_products(id),
-  status text NOT NULL DEFAULT 'pending',
-  product_image_index integer NOT NULL DEFAULT 0,
-  result_key text,
-  error text,
-  size_rec jsonb,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-`;
-
-async function getDb(): Promise<Db> {
-  const g = globalThis as GlobalWithDb;
-  if (!g[GLOBAL_KEY]) {
-    const client = postgres(midaEnv.DATABASE_URL!, { max: 5 });
-    const db = drizzle(client);
-    g[GLOBAL_KEY] = { db, ready: client.unsafe(ENSURE_SCHEMA_SQL).then(() => {}) };
-  }
-  await g[GLOBAL_KEY].ready;
-  return g[GLOBAL_KEY].db;
+async function getDb(): Promise<ReturnType<typeof drizzle>> {
+  // getSql() ensures the schema (including mida_files) before first query.
+  return drizzle(await getSql());
 }
 
 type ProfileRow = typeof midaProfiles.$inferSelect;
