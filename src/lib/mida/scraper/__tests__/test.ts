@@ -5,6 +5,7 @@ import { parseJsonLd } from "../jsonld";
 import { parseOg } from "../og";
 import { parseSizeChart } from "../sizechart";
 import { classifyGarment } from "../garment-type";
+import { findSizeGuideLinks } from "../sizeguide";
 
 let passed = 0;
 function test(name: string, fn: () => void) {
@@ -89,6 +90,21 @@ test("classifyGarment handles Hebrew and English titles", () => {
   assert.strictEqual(classifyGarment("Puffer Jacket"), "outerwear");
   assert.strictEqual(classifyGarment("חצאית מיני"), "skirt");
   assert.strictEqual(classifyGarment("אקססוריז לשיער"), "unknown");
+});
+
+test("findSizeGuideLinks finds Hebrew and English guide links", () => {
+  const html = `<html><body>
+    <a href="/pages/size-guide">מדריך מידות</a>
+    <a href="https://shop.example.com/help/size-chart">Size Chart</a>
+    <a href="https://other-site.com/sizes">size guide</a>
+    <a href="/about">אודות</a>
+    <a href="#modal">טבלת מידות</a>
+  </body></html>`;
+  const links = findSizeGuideLinks(cheerio.load(html), "https://www.example.com/product/1");
+  assert.deepStrictEqual(links, [
+    "https://www.example.com/pages/size-guide",
+    "https://shop.example.com/help/size-chart",
+  ]);
 });
 
 console.log(`\n${passed} scraper tests passed`);

@@ -96,6 +96,22 @@ export function tryOnPrompt(meta: TryOnMeta): string {
   return lines.join("\n");
 }
 
+/** Focused size-chart hunt: the chart usually hides behind a click. */
+export function sizeChartHuntPrompt(
+  productUrl: string,
+  guideUrls: string[]
+): string {
+  return [
+    `Find the SIZE CHART for the clothing product at: ${productUrl}`,
+    guideUrls.length
+      ? `The size chart may live on one of these size-guide pages — check them too: ${guideUrls.join(" , ")}`
+      : "The chart is usually NOT on the product page itself: look for a size-guide link on the product page (e.g. 'מדריך מידות', 'size guide', often under /customer-service/, /pages/, /help/), then OPEN that URL too and read the chart from there.",
+    "If the store has one general size chart for this garment category, that chart counts.",
+    'Return ONLY minified JSON, no markdown: {"sizeChart":{"rows":[{"label":string,"measures":[{"key":"chest"|"waist"|"hips"|"inseam"|"shoulders"|"height","minCm":number,"maxCm":number}]}]}|null}',
+    "Body measurements only (not garment flat measurements when both exist). Convert inches to centimeters (×2.54). A single value becomes min=max. If you cannot find a real size chart, return {\"sizeChart\":null}. Never invent numbers.",
+  ].join("\n");
+}
+
 /** Prompt for describing a garment from a user-uploaded screenshot. */
 export const DESCRIBE_GARMENT_PROMPT = [
   "The image is a screenshot or photo of a clothing product.",

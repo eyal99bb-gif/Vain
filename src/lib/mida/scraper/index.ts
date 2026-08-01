@@ -3,12 +3,13 @@
 import * as cheerio from "cheerio";
 import { getAi } from "../adapters/ai";
 import { midaEnv } from "../env";
-import type { ScrapedProduct } from "../types";
+import type { NormalizedSizeChart, ScrapedProduct, SizeChartSource } from "../types";
 import { classifyGarment } from "./garment-type";
 import { fetchPage } from "./fetch";
 import { parseJsonLd } from "./jsonld";
 import { parseOg } from "./og";
 import { parseSizeChart } from "./sizechart";
+import { findSizeGuideLinks } from "./sizeguide";
 import { matchStore } from "./stores/registry";
 
 function emptyProduct(): ScrapedProduct {
@@ -83,7 +84,15 @@ export async function scrapeProduct(url: string): Promise<ScrapedProduct> {
         if (product.garmentType === "unknown") {
           product.garmentType = classifyGarment(product.title);
         }
-        if (!product.sizeChart) product.warnings.push("no_size_chart");
+        if (!product.sizeChart) {
+          const hunted = await huntSizeChart(url, []);
+          if (hunted) {
+            product.sizeChart = hunted.chart;
+            product.sizeChartSource = hunted.source;
+          } else {
+            product.warnings.push("no_size_chart");
+          }
+        }
         return product;
       }
     }
@@ -132,7 +141,42 @@ export async function scrapeProduct(url: string): Promise<ScrapedProduct> {
     return demoFixture("scrape_failed_demo_data");
   }
   if (!product.sizeChart) {
-    product.warnings.push("no_size_chart");
+    const guideUrls = findSizeGuideLinks($, url);
+    const hunted = await huntSizeChart(url, guideUrls);
+    if (hunted) {
+      product.sizeChart = hunted.chart;
+      product.sizeChartSource = hunted.source;
+    } else {
+      product.warnings.push("no_size_chart");
+    }
   }
   return product;
+}
+
+/**
+ * Dedicated size-chart hunt: charts usually hide behind a "size guide"
+ * click. Statically parse linked guide pages first, then let Gemini check
+ * the product page + guide pages via URL-context.
+ */
+export async function huntSizeChart(
+  url: string,
+  guideUrls: string[]
+): Promise<{ chart: NormalizedSizeChart; source: SizeChartSource } | null> {
+  for (const guideUrl of guideUrls.slice(0, 2)) {
+    const page = await fetchPage(guideUrl);
+    if (page.ok) {
+      const chart = parseSizeChart(cheerio.load(page.html));
+      if (chart) return { chart, source: "html-table" };
+    }
+  }
+  if (midaEnv.aiMode === "real") {
+    try {
+      const ai = await getAi();
+      const chart = await ai.extractSizeChartFromUrls(url, guideUrls);
+      if (chart) return { chart, source: "llm" };
+    } catch {
+      // hunt is best-effort
+    }
+  }
+  return null;
 }
