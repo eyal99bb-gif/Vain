@@ -36,13 +36,18 @@ Copy `.env.example` to `.env.local` and fill in any subset:
 |---|---|
 | `GEMINI_API_KEY` | Real avatar + try-on generation, LLM product extraction |
 | `DATABASE_URL` (or `POSTGRES_URL`) | Postgres persistence via Drizzle — tables auto-created on first use |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob object storage (set automatically by Vercel) |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob object storage (optional) |
 | `S3_ENDPOINT` + `S3_ACCESS_KEY_ID` + `S3_SECRET_ACCESS_KEY` + `S3_BUCKET` | S3/R2 object storage (optional `S3_PUBLIC_URL` for CDN) |
 
+Image storage picks the first available: Blob → S3 → **Postgres** (`mida_files`
+table) → local disk. So when a database is configured, images are stored in
+Postgres and no separate object store is needed.
+
 **Deploying to Vercel:** serverless filesystems are read-only, so the
-file/disk demo fallbacks don't apply there — connect a **Neon Postgres**
-database and a **Blob store** from the project's Storage tab (both inject
-their env vars automatically), plus `GEMINI_API_KEY`, then redeploy.
+file/disk demo fallbacks don't apply there. Connect a **Neon Postgres**
+database from the project's Storage tab (injects `POSTGRES_URL`
+automatically) and set `GEMINI_API_KEY`, then redeploy — that's the whole
+setup. Images live in Postgres; a separate Blob/S3 store is optional.
 Photos are downscaled client-side to stay under Vercel's 4.5MB body limit.
 
 Each concern switches independently — adapters in

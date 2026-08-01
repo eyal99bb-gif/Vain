@@ -36,7 +36,9 @@ export const midaEnv = Object.freeze({
     ? "blob"
     : hasS3
       ? "s3"
-      : "local") as "blob" | "s3" | "local",
+      : databaseUrl
+        ? "pg"
+        : "local") as "blob" | "s3" | "pg" | "local",
 });
 
 export type MidaEnv = typeof midaEnv;
