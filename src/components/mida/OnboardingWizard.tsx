@@ -201,10 +201,16 @@ function PhotoStep({
         method: "POST",
         body: form,
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.detail ?? `HTTP ${res.status}`);
+      }
       onDone();
-    } catch {
-      onError("העלאת התמונות נכשלה — נסו שוב.");
+    } catch (err) {
+      const detail = err instanceof Error && err.message ? err.message : "";
+      onError(
+        `העלאת התמונות נכשלה — נסו שוב.${detail ? ` (${detail})` : ""}`
+      );
     } finally {
       setUploading(false);
     }
