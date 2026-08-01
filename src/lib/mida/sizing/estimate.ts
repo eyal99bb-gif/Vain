@@ -31,7 +31,7 @@ export function resolveMeasures(m: Measurements): ResolvedMeasures {
   put("waist", m.waistCm, 2.8 * bmi + 0.08 * m.heightCm);
   put("hips", m.hipsCm, 2.4 * bmi + 0.22 * m.heightCm);
   put("inseam", m.inseamCm, 0.45 * m.heightCm);
-  put("shoulders", m.shouldersCm, 0.23 * m.heightCm + 0.4 * bmi);
+  put("shoulders", m.shouldersCm, 0.21 * m.heightCm + 0.3 * bmi);
 
   return { values, estimated };
 }
