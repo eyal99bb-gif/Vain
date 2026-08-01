@@ -1,4 +1,4 @@
-import type { Measurements, ScrapedProduct } from "../../types";
+import type { Measurements, NormalizedSizeChart, ScrapedProduct } from "../../types";
 
 export interface ImageInput {
   data: Buffer;
@@ -51,6 +51,14 @@ export interface AiAdapter {
   ): Promise<GeneratedImage>;
   /** Describe a garment from a user-uploaded screenshot/photo. */
   describeGarmentImage(image: ImageInput): Promise<GarmentDescription>;
+  /**
+   * Hunt for the product's size chart via URL-context — charts usually hide
+   * behind a "size guide" click, so the model checks guide pages too.
+   */
+  extractSizeChartFromUrls(
+    productUrl: string,
+    guideUrls: string[]
+  ): Promise<NormalizedSizeChart | null>;
   /** LLM fallback extraction of product data from raw page HTML. */
   extractProduct(html: string, url: string): Promise<Partial<ScrapedProduct>>;
   /**

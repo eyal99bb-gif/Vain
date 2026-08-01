@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { getAi } from "../adapters/ai";
 import { getRepos } from "../adapters/db";
 import { getStorage } from "../adapters/storage";
-import { scrapeProduct } from "../scraper";
+import { huntSizeChart, scrapeProduct } from "../scraper";
 import type { GarmentType, Product } from "../types";
 
 function normalizeUrl(raw: string): string {
@@ -30,7 +30,22 @@ export async function ingestProduct(rawUrl: string): Promise<Product> {
   const cached = await repos.products.getByUrlHash(urlHash);
   // Serve the cache only for real products; a cached fixture means an earlier
   // scrape failed, so retry it (e.g. after a scraper fix or a transient block).
-  if (cached && !isFixture(cached)) return cached;
+  if (cached && !isFixture(cached)) {
+    // A saved product without a size chart gets one more hunt per paste —
+    // charts usually hide behind a "size guide" click and may appear now.
+    if (!cached.sizeChart) {
+      const hunted = await huntSizeChart(cached.url, []);
+      if (hunted) {
+        const updated = await repos.products.update(cached.id, {
+          sizeChart: hunted.chart,
+          sizeChartSource: hunted.source,
+          warnings: cached.warnings.filter((w) => w !== "no_size_chart"),
+        });
+        return updated ?? cached;
+      }
+    }
+    return cached;
+  }
 
   const scraped = await scrapeProduct(url);
 

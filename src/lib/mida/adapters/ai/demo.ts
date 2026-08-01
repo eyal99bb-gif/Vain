@@ -57,5 +57,8 @@ export function createDemoAdapter(): AiAdapter {
     async describeGarmentImage() {
       return {};
     },
+    async extractSizeChartFromUrls() {
+      return null;
+    },
   };
 }

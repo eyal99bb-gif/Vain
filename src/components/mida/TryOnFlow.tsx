@@ -371,6 +371,15 @@ function ItemCard({
           )}
           <span className="text-sm">{product.store}</span>
         </div>
+        {product.sizeChart ? (
+          <p className="pt-1 text-xs text-emerald-700">
+            ✓ נמצאה טבלת מידות — תקבלו המלצת מידה
+          </p>
+        ) : (
+          <p className="pt-1 text-xs text-mida-muted">
+            לא נמצאה טבלת מידות — ההדמיה תעבוד, בלי המלצת מידה
+          </p>
+        )}
         {product.warnings.includes("scrape_failed_demo_data") && (
           <p className="pt-1 text-xs text-mida-gold">
             לא הצלחנו לקרוא את החנות הזו — מציגים מוצר הדגמה.

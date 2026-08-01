@@ -8,6 +8,7 @@ import {
   DESCRIBE_GARMENT_PROMPT,
   EXTRACT_PRODUCT_SCHEMA,
   extractProductPrompt,
+  sizeChartHuntPrompt,
   tryOnPrompt,
   urlContextPrompt,
 } from "./prompts";
@@ -153,6 +154,63 @@ export function createGeminiAdapter(): AiAdapter {
 
     async generateTryOn(avatar, productImages, meta) {
       return generateImage(tryOnPrompt(meta), [avatar, ...productImages]);
+    },
+
+    async extractSizeChartFromUrls(productUrl, guideUrls) {
+      // The URL-context tool only fetches URLs present in the prompt text —
+      // it can't follow links it discovers. So when no guide URLs are known,
+      // first ask for the size-guide link, then hunt with it explicitly.
+      if (guideUrls.length === 0) {
+        try {
+          const discovery = await getClient().models.generateContent({
+            model: midaEnv.GEMINI_TEXT_MODEL,
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `Find links to size-guide / size-chart pages ('מדריך מידות') on ${productUrl}. Return ONLY minified JSON: {"urls":[absolute URLs, up to 3]} — or {"urls":[]} if none.`,
+                  },
+                ],
+              },
+            ],
+            config: { tools: [{ urlContext: {} }] },
+          });
+          const raw = discovery.text;
+          const parsed = raw
+            ? (parseLooseJson(raw) as { urls?: string[] } | null)
+            : null;
+          guideUrls = (parsed?.urls ?? [])
+            .filter((u) => /^https?:\/\//.test(u))
+            .slice(0, 3);
+        } catch {
+          // discovery is best-effort
+        }
+      }
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await getClient().models.generateContent({
+            model: midaEnv.GEMINI_TEXT_MODEL,
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: sizeChartHuntPrompt(productUrl, guideUrls) }],
+              },
+            ],
+            config: { tools: [{ urlContext: {} }] },
+          });
+          const raw = response.text;
+          const parsed = raw ? parseLooseJson(raw) : null;
+          if (parsed) {
+            const mapped = mapLlmProduct(parsed);
+            if (mapped.sizeChart) return mapped.sizeChart;
+          }
+        } catch {
+          // retry once, then give up quietly
+        }
+      }
+      return null;
     },
 
     async describeGarmentImage(image) {
