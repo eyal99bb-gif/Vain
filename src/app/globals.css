@@ -10,11 +10,30 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-heebo);
   --font-display: var(--font-frank-ruhl);
+
+  /* MIDA (light/warm) palette — scoped visually via .mida wrapper */
+  --color-mida-bg: #faf6f1;
+  --color-mida-surface: #ffffff;
+  --color-mida-ink: #2b2118;
+  --color-mida-muted: #6f6558;
+  --color-mida-line: #e8e0d5;
+  --color-mida-accent: #e11d48;
+  --color-mida-accent-deep: #be123c;
+  --color-mida-accent-soft: #ffe4e6;
+  --color-mida-gold: #b45309;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-heebo), "Heebo", system-ui, sans-serif;
+}
+
+/* MIDA scope: paints its own light theme without touching the dark body
+   that Studio Vain and /trading depend on. */
+.mida {
+  background: #faf6f1;
+  color: #2b2118;
   font-family: var(--font-heebo), "Heebo", system-ui, sans-serif;
 }
 
