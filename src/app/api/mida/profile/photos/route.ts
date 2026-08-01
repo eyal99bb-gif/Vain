@@ -45,6 +45,18 @@ export async function POST(request: Request) {
   }
 
   const uid = await ensureUid();
-  const photoKeys = await addPhotos(uid, photos);
-  return Response.json({ photoKeys });
+  try {
+    const photoKeys = await addPhotos(uid, photos);
+    return Response.json({ photoKeys });
+  } catch (err) {
+    // Surface the real cause (e.g. read-only filesystem, missing storage
+    // credentials) so deploy misconfigurations are diagnosable from the UI.
+    return Response.json(
+      {
+        error: "upload_failed",
+        detail: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      },
+      { status: 500 }
+    );
+  }
 }
