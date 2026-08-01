@@ -51,5 +51,8 @@ export function createDemoAdapter(): AiAdapter {
       // Demo mode has no LLM; the scraper falls back to the fixture product.
       return {};
     },
+    async extractProductFromUrl() {
+      return {};
+    },
   };
 }

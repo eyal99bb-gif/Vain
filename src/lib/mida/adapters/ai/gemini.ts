@@ -8,6 +8,7 @@ import {
   EXTRACT_PRODUCT_SCHEMA,
   extractProductPrompt,
   tryOnPrompt,
+  urlContextPrompt,
 } from "./prompts";
 
 function getClient(): GoogleGenAI {
@@ -75,6 +76,62 @@ const MEASURE_KEYS = new Set([
   "height",
 ]);
 
+/** Map a parsed LLM product object to our ScrapedProduct shape. */
+function mapLlmProduct(parsed: LlmProduct): Partial<ScrapedProduct> {
+  const result: Partial<ScrapedProduct> = {};
+  if (parsed.title) result.title = parsed.title;
+  if (typeof parsed.price === "number") result.price = parsed.price;
+  if (parsed.currency) result.currency = parsed.currency;
+  if (parsed.images?.length) {
+    result.images = parsed.images.filter((u) => /^https?:\/\//.test(u));
+  }
+  if (parsed.colors?.length) result.colors = parsed.colors;
+  if (parsed.garmentType) result.garmentType = parsed.garmentType;
+
+  if (parsed.sizeChart?.rows?.length) {
+    const rows = parsed.sizeChart.rows
+      .map((row) => ({
+        label: row.label,
+        values: Object.fromEntries(
+          row.measures
+            .filter((m) => MEASURE_KEYS.has(m.key) && m.minCm > 0 && m.maxCm > 0)
+            .map((m) => [
+              m.key,
+              { min: Math.min(m.minCm, m.maxCm), max: Math.max(m.minCm, m.maxCm) },
+            ])
+        ),
+      }))
+      .filter((row) => Object.keys(row.values).length > 0);
+    if (rows.length > 0) {
+      result.sizeChart = { unit: "cm", rows };
+      result.sizeChartSource = "llm";
+    }
+  }
+
+  return result;
+}
+
+/** Parse JSON that a model may have wrapped in a ```json fence. */
+function parseLooseJson(text: string): LlmProduct | null {
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fall back to the first {...} block if there's surrounding prose.
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+}
+
 export function createGeminiAdapter(): AiAdapter {
   return {
     async generateAvatar(photos, measurements) {
@@ -102,44 +159,33 @@ export function createGeminiAdapter(): AiAdapter {
 
       const raw = response.text;
       if (!raw) return {};
-      let parsed: LlmProduct;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        return {};
-      }
+      const parsed = parseLooseJson(raw);
+      return parsed ? mapLlmProduct(parsed) : {};
+    },
 
-      const result: Partial<ScrapedProduct> = {};
-      if (parsed.title) result.title = parsed.title;
-      if (typeof parsed.price === "number") result.price = parsed.price;
-      if (parsed.currency) result.currency = parsed.currency;
-      if (parsed.images?.length) result.images = parsed.images;
-      if (parsed.colors?.length) result.colors = parsed.colors;
-      if (parsed.garmentType) result.garmentType = parsed.garmentType;
-
-      if (parsed.sizeChart?.rows?.length) {
-        const rows = parsed.sizeChart.rows
-          .map((row) => ({
-            label: row.label,
-            values: Object.fromEntries(
-              row.measures
-                .filter(
-                  (m) => MEASURE_KEYS.has(m.key) && m.minCm > 0 && m.maxCm > 0
-                )
-                .map((m) => [
-                  m.key,
-                  { min: Math.min(m.minCm, m.maxCm), max: Math.max(m.minCm, m.maxCm) },
-                ])
-            ),
-          }))
-          .filter((row) => Object.keys(row.values).length > 0);
-        if (rows.length > 0) {
-          result.sizeChart = { unit: "cm", rows };
-          result.sizeChartSource = "llm";
+    async extractProductFromUrl(url) {
+      // The URL-context tool has Google's servers fetch the page, so this
+      // works even when the store blocks server-side fetches. responseSchema
+      // can't combine with tools, so we parse loosely. The tool call is slow
+      // and occasionally transient-fails, so retry once.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await getClient().models.generateContent({
+            model: midaEnv.GEMINI_TEXT_MODEL,
+            contents: [
+              { role: "user", parts: [{ text: urlContextPrompt(url) }] },
+            ],
+            config: { tools: [{ urlContext: {} }] },
+          });
+          const raw = response.text;
+          const parsed = raw ? parseLooseJson(raw) : null;
+          const mapped = parsed ? mapLlmProduct(parsed) : {};
+          if (mapped.title) return mapped;
+        } catch {
+          if (attempt === 1) throw new Error("url-context extraction failed");
         }
       }
-
-      return result;
+      return {};
     },
   };
 }

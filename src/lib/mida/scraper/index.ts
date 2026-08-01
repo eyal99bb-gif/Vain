@@ -67,7 +67,26 @@ function htmlForLlm(html: string): string {
 
 export async function scrapeProduct(url: string): Promise<ScrapedProduct> {
   const outcome = await fetchPage(url);
+
+  // Direct fetch blocked/failed (common on bot-walled Israeli stores): have
+  // Gemini fetch the page itself via URL-context before giving up.
   if (!outcome.ok) {
+    if (midaEnv.aiMode === "real") {
+      const product = emptyProduct();
+      try {
+        const ai = await getAi();
+        merge(product, await ai.extractProductFromUrl(url));
+      } catch {
+        // fall through to fixture below
+      }
+      if (product.title) {
+        if (product.garmentType === "unknown") {
+          product.garmentType = classifyGarment(product.title);
+        }
+        if (!product.sizeChart) product.warnings.push("no_size_chart");
+        return product;
+      }
+    }
     return demoFixture("scrape_failed_demo_data");
   }
 
@@ -93,11 +112,17 @@ export async function scrapeProduct(url: string): Promise<ScrapedProduct> {
   }
 
   // LLM fallback fills whatever structured parsing missed (real mode only).
-  const needsLlm = !product.title || product.images.length === 0 || !product.sizeChart;
+  const needsLlm =
+    !product.title || product.images.length === 0 || !product.sizeChart;
   if (needsLlm && midaEnv.aiMode === "real") {
     try {
       const ai = await getAi();
       merge(product, await ai.extractProduct(htmlForLlm(outcome.html), url));
+      // If HTML parsing still found no image (lazy-loaded/JS galleries),
+      // let the model fetch the page directly for the real image URLs.
+      if (product.images.length === 0) {
+        merge(product, await ai.extractProductFromUrl(url));
+      }
     } catch {
       product.warnings.push("llm_extraction_failed");
     }

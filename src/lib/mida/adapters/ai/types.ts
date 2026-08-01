@@ -31,4 +31,9 @@ export interface AiAdapter {
   ): Promise<GeneratedImage>;
   /** LLM fallback extraction of product data from raw page HTML. */
   extractProduct(html: string, url: string): Promise<Partial<ScrapedProduct>>;
+  /**
+   * Extract product data by having the model fetch the URL itself (Gemini
+   * URL-context tool). Bypasses bot walls that block server-side fetches.
+   */
+  extractProductFromUrl(url: string): Promise<Partial<ScrapedProduct>>;
 }
