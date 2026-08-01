@@ -110,6 +110,14 @@ export function createFileRepos(): Repos {
         persist(store);
         return created;
       },
+      async update(id, patch) {
+        const store = loadStore();
+        const product = store.products.find((p) => p.id === id);
+        if (!product) return null;
+        Object.assign(product, patch);
+        persist(store);
+        return product;
+      },
     },
     tryons: {
       async getById(id) {

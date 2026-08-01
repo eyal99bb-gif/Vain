@@ -138,6 +138,15 @@ export function createDrizzleRepos(): Repos {
         const rows = await db.insert(midaProducts).values(product).returning();
         return toProduct(rows[0]);
       },
+      async update(id, patch) {
+        const db = await dbPromise();
+        const rows = await db
+          .update(midaProducts)
+          .set(patch)
+          .where(eq(midaProducts.id, id))
+          .returning();
+        return rows[0] ? toProduct(rows[0]) : null;
+      },
     },
     tryons: {
       async getById(id) {
