@@ -54,5 +54,8 @@ export function createDemoAdapter(): AiAdapter {
     async extractProductFromUrl() {
       return {};
     },
+    async describeGarmentImage() {
+      return {};
+    },
   };
 }

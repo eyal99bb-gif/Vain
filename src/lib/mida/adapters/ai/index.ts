@@ -16,4 +16,11 @@ export async function getAi(): Promise<AiAdapter> {
   return adapter;
 }
 
-export type { AiAdapter, GeneratedImage, ImageInput, TryOnMeta } from "./types";
+export type {
+  AiAdapter,
+  GarmentDescription,
+  GarmentRef,
+  GeneratedImage,
+  ImageInput,
+  TryOnMeta,
+} from "./types";

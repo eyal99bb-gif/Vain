@@ -10,15 +10,29 @@ export interface GeneratedImage {
   mimeType: string;
 }
 
-export interface TryOnMeta {
-  productTitle: string;
+export interface GarmentRef {
+  title: string;
   garmentType: string;
-  size: string | null;
   color: string | null;
+}
+
+export interface TryOnMeta {
+  /** Garments in the same order as the product images (1-3). */
+  garments: GarmentRef[];
+  /** Size fit info for the garment that has a size chart (if any). */
+  size: string | null;
+  /** Title of the garment the size applies to. */
+  sizeGarmentTitle: string | null;
   /** The chosen size row's measurement ranges from the store chart, in cm. */
   sizeRow: Partial<Record<string, { min: number; max: number }>> | null;
   /** The user's body measurements in cm (girths possibly estimated). */
   userMeasurements: Partial<Record<string, number>> | null;
+}
+
+export interface GarmentDescription {
+  title?: string;
+  garmentType?: string;
+  colors?: string[];
 }
 
 export interface AiAdapter {
@@ -27,12 +41,14 @@ export interface AiAdapter {
     photos: ImageInput[],
     measurements: Measurements
   ): Promise<GeneratedImage>;
-  /** Dress the avatar with the product image. */
+  /** Dress the person photo with the product image(s), in order. */
   generateTryOn(
     avatar: ImageInput,
-    productImage: ImageInput,
+    productImages: ImageInput[],
     meta: TryOnMeta
   ): Promise<GeneratedImage>;
+  /** Describe a garment from a user-uploaded screenshot/photo. */
+  describeGarmentImage(image: ImageInput): Promise<GarmentDescription>;
   /** LLM fallback extraction of product data from raw page HTML. */
   extractProduct(html: string, url: string): Promise<Partial<ScrapedProduct>>;
   /**

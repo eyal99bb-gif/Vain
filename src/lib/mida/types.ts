@@ -125,7 +125,10 @@ export interface SizeRecommendation {
 export interface TryOn {
   id: string;
   profileId: string;
+  /** Primary product (first item); kept for compatibility and FKs. */
   productId: string;
+  /** All products dressed in this try-on, in order (1-3 items). */
+  productIds: string[];
   status: TryOnStatus;
   productImageIndex: number;
   resultKey: string | null;

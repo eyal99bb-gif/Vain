@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS mida_tryons (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id uuid NOT NULL REFERENCES mida_profiles(id),
   product_id uuid NOT NULL REFERENCES mida_products(id),
+  product_ids jsonb NOT NULL DEFAULT '[]',
   status text NOT NULL DEFAULT 'pending',
   product_image_index integer NOT NULL DEFAULT 0,
   result_key text,
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS mida_files (
   data bytea NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE mida_tryons ADD COLUMN IF NOT EXISTS product_ids jsonb NOT NULL DEFAULT '[]';
 `;
 
 const GLOBAL_KEY = "__midaPg";

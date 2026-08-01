@@ -58,6 +58,7 @@ export const midaTryons = pgTable("mida_tryons", {
   productId: uuid("product_id")
     .notNull()
     .references(() => midaProducts.id),
+  productIds: jsonb("product_ids").notNull().default([]),
   status: text("status").notNull().default("pending"),
   productImageIndex: integer("product_image_index").notNull().default(0),
   resultKey: text("result_key"),
