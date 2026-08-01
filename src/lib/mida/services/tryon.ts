@@ -114,8 +114,11 @@ export async function startTryOn(
       );
 
       const ext = MIME_TO_EXT[result.mimeType] ?? ".png";
-      const resultKey = `${profile.uid}/tryons/${tryon.id}${ext}`;
-      await storage.put(resultKey, result.data, result.mimeType);
+      const resultKey = await storage.put(
+        `${profile.uid}/tryons/${tryon.id}${ext}`,
+        result.data,
+        result.mimeType
+      );
 
       await repos.tryons.update(tryon.id, { status: "ready", resultKey });
     } catch (err) {

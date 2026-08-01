@@ -55,8 +55,11 @@ export async function startAvatarGeneration(
       });
 
       const ext = MIME_TO_EXT[result.mimeType] ?? ".png";
-      const avatarKey = `${uid}/avatar/${crypto.randomUUID()}${ext}`;
-      await storage.put(avatarKey, result.data, result.mimeType);
+      const avatarKey = await storage.put(
+        `${uid}/avatar/${crypto.randomUUID()}${ext}`,
+        result.data,
+        result.mimeType
+      );
 
       await repos.profiles.upsertByUid(uid, {
         avatarKey,

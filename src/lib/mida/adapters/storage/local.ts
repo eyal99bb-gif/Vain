@@ -32,6 +32,7 @@ export function createLocalStorage(): StorageAdapter {
       const file = safePath(key);
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, data);
+      return key;
     },
     async get(key) {
       try {

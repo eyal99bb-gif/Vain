@@ -35,8 +35,15 @@ Copy `.env.example` to `.env.local` and fill in any subset:
 | Vars | Enables |
 |---|---|
 | `GEMINI_API_KEY` | Real avatar + try-on generation, LLM product extraction |
-| `DATABASE_URL` | Postgres persistence via Drizzle (`npm run db:push` to apply schema) |
+| `DATABASE_URL` (or `POSTGRES_URL`) | Postgres persistence via Drizzle — tables auto-created on first use |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob object storage (set automatically by Vercel) |
 | `S3_ENDPOINT` + `S3_ACCESS_KEY_ID` + `S3_SECRET_ACCESS_KEY` + `S3_BUCKET` | S3/R2 object storage (optional `S3_PUBLIC_URL` for CDN) |
+
+**Deploying to Vercel:** serverless filesystems are read-only, so the
+file/disk demo fallbacks don't apply there — connect a **Neon Postgres**
+database and a **Blob store** from the project's Storage tab (both inject
+their env vars automatically), plus `GEMINI_API_KEY`, then redeploy.
+Photos are downscaled client-side to stay under Vercel's 4.5MB body limit.
 
 Each concern switches independently — adapters in
 `src/lib/mida/adapters/{ai,db,storage}` pick real vs demo per env var.

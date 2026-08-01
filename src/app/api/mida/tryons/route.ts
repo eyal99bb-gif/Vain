@@ -1,3 +1,7 @@
+// Post-response try-on generation (after()) needs the function alive for the
+// full Gemini call — Vercel Hobby caps at 60s.
+export const maxDuration = 60;
+
 import { z } from "zod";
 import { readUid } from "@/lib/mida/uid";
 import { getProfile } from "@/lib/mida/services/profile";
