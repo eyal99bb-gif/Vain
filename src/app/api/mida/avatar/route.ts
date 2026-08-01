@@ -1,15 +1,9 @@
-// Post-response avatar generation (after()) needs the function alive for the
-// full Gemini call — Vercel Hobby caps at 60s.
-export const maxDuration = 60;
-
-import { readUid } from "@/lib/mida/uid";
-import { getProfile } from "@/lib/mida/services/profile";
+import { getActiveProfile } from "@/lib/mida/services/profile";
 import { startAvatarGeneration } from "@/lib/mida/services/avatar";
 import { getStorage } from "@/lib/mida/adapters/storage";
 
 export async function GET() {
-  const uid = await readUid();
-  const profile = uid ? await getProfile(uid) : null;
+  const profile = await getActiveProfile();
   if (!profile) {
     return Response.json({ status: "none", avatarUrl: null, error: null });
   }
@@ -22,10 +16,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const uid = await readUid();
-  if (!uid) return Response.json({ error: "no_profile" }, { status: 400 });
-
-  const result = await startAvatarGeneration(uid);
+  const result = await startAvatarGeneration();
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: 400 });
   }

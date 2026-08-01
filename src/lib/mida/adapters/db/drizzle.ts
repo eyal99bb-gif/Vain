@@ -1,6 +1,6 @@
 // Postgres-backed repos via Drizzle (active when DATABASE_URL is set).
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getSql } from "./client";
 import type {
   AvatarStatus,
@@ -30,6 +30,7 @@ function toProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     uid: row.uid,
+    name: row.name,
     heightCm: row.heightCm,
     weightKg: row.weightKg,
     chestCm: row.chestCm,
@@ -86,14 +87,14 @@ export function createDrizzleRepos(): Repos {
   const dbPromise = () => getDb();
   return {
     profiles: {
-      async getByUid(uid) {
+      async listByUid(uid) {
         const db = await dbPromise();
         const rows = await db
           .select()
           .from(midaProfiles)
           .where(eq(midaProfiles.uid, uid))
-          .limit(1);
-        return rows[0] ? toProfile(rows[0]) : null;
+          .orderBy(midaProfiles.createdAt);
+        return rows.map(toProfile);
       },
       async getById(id) {
         const db = await dbPromise();
@@ -104,15 +105,22 @@ export function createDrizzleRepos(): Repos {
           .limit(1);
         return rows[0] ? toProfile(rows[0]) : null;
       },
-      async upsertByUid(uid, patch) {
-        const values = { uid, ...patch, updatedAt: new Date() };
+      async create(uid, patch) {
         const db = await dbPromise();
         const rows = await db
           .insert(midaProfiles)
-          .values(values)
-          .onConflictDoUpdate({ target: midaProfiles.uid, set: values })
+          .values({ uid, ...patch })
           .returning();
         return toProfile(rows[0]);
+      },
+      async updateById(id, patch) {
+        const db = await dbPromise();
+        const rows = await db
+          .update(midaProfiles)
+          .set({ ...patch, updatedAt: new Date() })
+          .where(eq(midaProfiles.id, id))
+          .returning();
+        return rows[0] ? toProfile(rows[0]) : null;
       },
     },
     products: {
@@ -158,6 +166,16 @@ export function createDrizzleRepos(): Repos {
           .where(eq(midaTryons.id, id))
           .limit(1);
         return rows[0] ? toTryOn(rows[0]) : null;
+      },
+      async listByProfile(profileId, limit) {
+        const db = await dbPromise();
+        const rows = await db
+          .select()
+          .from(midaTryons)
+          .where(eq(midaTryons.profileId, profileId))
+          .orderBy(desc(midaTryons.createdAt))
+          .limit(limit);
+        return rows.map(toTryOn);
       },
       async create(tryon) {
         const db = await dbPromise();

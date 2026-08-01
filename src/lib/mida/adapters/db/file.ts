@@ -55,39 +55,45 @@ const now = () => new Date().toISOString();
 export function createFileRepos(): Repos {
   return {
     profiles: {
-      async getByUid(uid) {
-        return loadStore().profiles.find((p) => p.uid === uid) ?? null;
+      async listByUid(uid) {
+        return loadStore()
+          .profiles.filter((p) => p.uid === uid)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       },
       async getById(id) {
         return loadStore().profiles.find((p) => p.id === id) ?? null;
       },
-      async upsertByUid(uid, patch) {
+      async create(uid, patch) {
         const store = loadStore();
-        let profile = store.profiles.find((p) => p.uid === uid);
-        if (profile) {
-          Object.assign(profile, patch, { updatedAt: now() });
-        } else {
-          profile = {
-            id: crypto.randomUUID(),
-            uid,
-            heightCm: null,
-            weightKg: null,
-            chestCm: null,
-            waistCm: null,
-            hipsCm: null,
-            inseamCm: null,
-            shouldersCm: null,
-            fitPreference: "regular",
-            photoKeys: [],
-            avatarKey: null,
-            avatarStatus: "none",
-            avatarError: null,
-            ...patch,
-            createdAt: now(),
-            updatedAt: now(),
-          };
-          store.profiles.push(profile);
-        }
+        const profile: Profile = {
+          id: crypto.randomUUID(),
+          uid,
+          name: "הפרופיל שלי",
+          heightCm: null,
+          weightKg: null,
+          chestCm: null,
+          waistCm: null,
+          hipsCm: null,
+          inseamCm: null,
+          shouldersCm: null,
+          fitPreference: "regular",
+          photoKeys: [],
+          avatarKey: null,
+          avatarStatus: "none",
+          avatarError: null,
+          ...patch,
+          createdAt: now(),
+          updatedAt: now(),
+        };
+        store.profiles.push(profile);
+        persist(store);
+        return profile;
+      },
+      async updateById(id, patch) {
+        const store = loadStore();
+        const profile = store.profiles.find((p) => p.id === id);
+        if (!profile) return null;
+        Object.assign(profile, patch, { updatedAt: now() });
         persist(store);
         return profile;
       },
@@ -122,6 +128,12 @@ export function createFileRepos(): Repos {
     tryons: {
       async getById(id) {
         return loadStore().tryons.find((t) => t.id === id) ?? null;
+      },
+      async listByProfile(profileId, limit) {
+        return loadStore()
+          .tryons.filter((t) => t.profileId === profileId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+          .slice(0, limit);
       },
       async create(tryon) {
         const store = loadStore();
