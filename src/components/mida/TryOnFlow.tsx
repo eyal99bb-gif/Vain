@@ -9,14 +9,17 @@ import { compressImage } from "./imageUtils";
 type Phase =
   | { name: "idle" }
   | { name: "busy"; text: string }
-  | { name: "processing"; tryonId: string }
-  | { name: "ready"; resultUrl: string | null; sizeRec: SizeRecommendation | null }
-  | { name: "failed"; message: string };
-
-const MAX_ITEMS = 3;
+  | { name: "itemReady"; product: Product }
+  | { name: "processing"; product: Product; tryonId: string }
+  | {
+      name: "ready";
+      resultUrl: string | null;
+      sizeRec: SizeRecommendation | null;
+    }
+  | { name: "failed"; product: Product | null; message: string };
 
 const PROGRESS_LINES = [
-  "מנתחים את הפריטים…",
+  "מנתחים את הפריט…",
   "מודדים מול הפרופיל שלך…",
   "מלבישים אותך…",
   "עוד רגע קטן…",
@@ -42,9 +45,12 @@ function Spinner() {
 
 export default function TryOnFlow() {
   const [phase, setPhase] = useState<Phase>({ name: "idle" });
-  const [items, setItems] = useState<Product[]>([]);
   const [url, setUrl] = useState("");
   const [demoMode, setDemoMode] = useState(false);
+  // The look built so far: items already dressed + the try-on whose result
+  // the next item will be layered onto.
+  const [wornItems, setWornItems] = useState<Product[]>([]);
+  const [lastTryOnId, setLastTryOnId] = useState<string | null>(null);
   const screenshotRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,14 +62,6 @@ export default function TryOnFlow() {
       .catch(() => {});
   }, []);
 
-  const addItem = (product: Product) => {
-    setItems((prev) =>
-      prev.some((p) => p.id === product.id)
-        ? prev
-        : [...prev, product].slice(0, MAX_ITEMS)
-    );
-  };
-
   const ingest = async () => {
     setPhase({ name: "busy", text: "קוראים את עמוד המוצר…" });
     try {
@@ -74,12 +72,12 @@ export default function TryOnFlow() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      addItem(data.product);
       setUrl("");
-      setPhase({ name: "idle" });
+      setPhase({ name: "itemReady", product: data.product });
     } catch {
       setPhase({
         name: "failed",
+        product: null,
         message: "לא הצלחנו לקרוא את העמוד — בדקו את הקישור, או העלו צילום מסך של המוצר.",
       });
     }
@@ -98,28 +96,28 @@ export default function TryOnFlow() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      addItem(data.product);
-      setPhase({ name: "idle" });
+      setPhase({ name: "itemReady", product: data.product });
     } catch {
-      setPhase({
-        name: "failed",
-        message: "העלאת צילום המסך נכשלה — נסו שוב.",
-      });
+      setPhase({ name: "failed", product: null, message: "העלאת צילום המסך נכשלה — נסו שוב." });
     }
   };
 
-  const startTryOn = async () => {
+  const startTryOn = async (product: Product) => {
     try {
       const res = await fetch("/api/mida/tryons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productIds: items.map((p) => p.id) }),
+        body: JSON.stringify({
+          productId: product.id,
+          // Layer onto the current look when one exists.
+          ...(lastTryOnId ? { baseTryOnId: lastTryOnId } : {}),
+        }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setPhase({ name: "processing", tryonId: data.tryon.id });
+      setPhase({ name: "processing", product, tryonId: data.tryon.id });
     } catch {
-      setPhase({ name: "failed", message: "המדידה לא יצאה לדרך — נסו שוב." });
+      setPhase({ name: "failed", product, message: "המדידה לא יצאה לדרך — נסו שוב." });
     }
   };
 
@@ -159,31 +157,48 @@ export default function TryOnFlow() {
               onUrlChange={setUrl}
               onSubmit={ingest}
               onScreenshot={() => screenshotRef.current?.click()}
-              items={items}
-              onRemove={(id) => setItems((prev) => prev.filter((p) => p.id !== id))}
-              onTryOn={startTryOn}
+              wornItems={wornItems}
             />
           )}
 
           {phase.name === "busy" && <CenteredStatus text={phase.text} />}
 
+          {phase.name === "itemReady" && (
+            <ItemCard
+              product={phase.product}
+              isAddition={wornItems.length > 0}
+              onTryOn={() => startTryOn(phase.product)}
+              onCancel={() => setPhase({ name: "idle" })}
+            />
+          )}
+
           {phase.name === "processing" && (
             <ProcessingView
               tryonId={phase.tryonId}
-              onReady={(resultUrl, sizeRec) =>
-                setPhase({ name: "ready", resultUrl, sizeRec })
+              onReady={(resultUrl, sizeRec) => {
+                setWornItems((prev) =>
+                  prev.some((p) => p.id === phase.product.id)
+                    ? prev
+                    : [...prev, phase.product]
+                );
+                setLastTryOnId(phase.tryonId);
+                setPhase({ name: "ready", resultUrl, sizeRec });
+              }}
+              onFailed={(message) =>
+                setPhase({ name: "failed", product: phase.product, message })
               }
-              onFailed={(message) => setPhase({ name: "failed", message })}
             />
           )}
 
           {phase.name === "ready" && (
             <ResultView
-              items={items}
+              wornItems={wornItems}
               resultUrl={phase.resultUrl}
               sizeRec={phase.sizeRec}
-              onAnother={() => {
-                setItems([]);
+              onAddItem={() => setPhase({ name: "idle" })}
+              onReset={() => {
+                setWornItems([]);
+                setLastTryOnId(null);
                 setUrl("");
                 setPhase({ name: "idle" });
               }}
@@ -195,19 +210,29 @@ export default function TryOnFlow() {
               <p role="alert" className="leading-relaxed text-mida-ink">
                 {phase.message}
               </p>
+              {phase.product ? (
+                <button
+                  type="button"
+                  onClick={() => startTryOn(phase.product!)}
+                  className={primaryBtnCls}
+                >
+                  ניסיון נוסף
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => screenshotRef.current?.click()}
+                  className={primaryBtnCls}
+                >
+                  העלאת צילום מסך של המוצר
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPhase({ name: "idle" })}
-                className={primaryBtnCls}
-              >
-                חזרה
-              </button>
-              <button
-                type="button"
-                onClick={() => screenshotRef.current?.click()}
                 className={secondaryBtnCls}
               >
-                העלאת צילום מסך של המוצר
+                חזרה
               </button>
             </div>
           )}
@@ -222,127 +247,148 @@ function IdleView({
   onUrlChange,
   onSubmit,
   onScreenshot,
-  items,
-  onRemove,
-  onTryOn,
+  wornItems,
 }: {
   url: string;
   onUrlChange: (v: string) => void;
   onSubmit: () => void;
   onScreenshot: () => void;
-  items: Product[];
-  onRemove: (id: string) => void;
-  onTryOn: () => void;
+  wornItems: Product[];
 }) {
   const valid = /^https?:\/\/.+\..+/.test(url.trim());
-  const canAdd = items.length < MAX_ITEMS;
+  const isAddition = wornItems.length > 0;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <h1 className="font-display text-3xl font-bold text-mida-ink">
-        {items.length === 0 ? "מה מודדים היום?" : "הלוק שלך"}
+        {isAddition ? "מוסיפים פריט ללוק" : "מה מודדים היום?"}
       </h1>
 
-      {items.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {items.map((p) => (
-            <li
-              key={p.id}
-              className="flex items-center gap-3 rounded-2xl border border-mida-line bg-mida-surface p-3"
-            >
-              {p.images[0] ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={p.images[0]}
-                  alt={p.title}
-                  className="h-16 w-12 shrink-0 rounded-lg border border-mida-line object-cover"
-                />
-              ) : (
-                <span className="flex h-16 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-mida-line text-[10px] text-mida-muted">
-                  אין תמונה
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-mida-ink">
-                  {p.title}
-                </p>
-                <p className="text-xs text-mida-muted">
-                  {p.price != null && (
-                    <span dir="ltr">
-                      {p.price.toFixed(2)} {p.currency === "ILS" ? "₪" : (p.currency ?? "")}
-                    </span>
-                  )}{" "}
-                  {p.store}
-                </p>
-                {p.images.length === 0 && (
-                  <p className="pt-0.5 text-xs text-mida-gold">
-                    בלי תמונה אי אפשר להלביש — העלו צילום מסך
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                aria-label={`הסרת ${p.title}`}
-                onClick={() => onRemove(p.id)}
-                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-mida-muted transition-colors duration-200 hover:bg-mida-accent-soft hover:text-mida-accent-deep"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-            </li>
-          ))}
-        </ul>
+      {isAddition && (
+        <p className="text-sm leading-relaxed text-mida-muted">
+          כבר עליך: {wornItems.map((p) => p.title).join(" · ")}
+          <br />
+          הפריט הבא יולבש מעל הלוק הקיים.
+        </p>
+      )}
+      {!isAddition && (
+        <p className="leading-relaxed text-mida-muted">
+          מדביקים קישור למוצר מכל חנות אונליין — או מעלים צילום מסך שלו. אחרי
+          כל פריט אפשר להוסיף עוד: מכנס, נעליים, שעון…
+        </p>
       )}
 
-      {canAdd && (
-        <>
-          <p className="text-sm leading-relaxed text-mida-muted">
-            {items.length === 0
-              ? "מדביקים קישור למוצר מכל חנות אונליין — או מעלים צילום מסך שלו."
-              : "אפשר להוסיף עוד פריט ללוק (עד 3)."}
-          </p>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-mida-ink">קישור למוצר</span>
-            <input
-              dir="ltr"
-              type="url"
-              inputMode="url"
-              placeholder="https://…"
-              value={url}
-              onChange={(e) => onUrlChange(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && valid && onSubmit()}
-              className="h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-start text-base text-mida-ink placeholder:text-mida-muted/60 focus:border-mida-accent focus:outline-none"
-            />
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!valid}
-              onClick={onSubmit}
-              className="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-mida-accent text-sm font-semibold text-mida-accent-deep transition-colors duration-200 hover:bg-mida-accent-soft disabled:cursor-default disabled:opacity-40"
-            >
-              הוספה מקישור
-            </button>
-            <button
-              type="button"
-              onClick={onScreenshot}
-              className="flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-mida-line text-sm font-medium text-mida-ink transition-colors duration-200 hover:border-mida-accent"
-            >
-              העלאת צילום מסך
-            </button>
-          </div>
-        </>
-      )}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-mida-ink">קישור למוצר</span>
+        <input
+          dir="ltr"
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          value={url}
+          onChange={(e) => onUrlChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && valid && onSubmit()}
+          className="h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-start text-base text-mida-ink placeholder:text-mida-muted/60 focus:border-mida-accent focus:outline-none"
+        />
+      </label>
 
-      <div className="mt-auto pt-4">
+      <div className="mt-auto flex flex-col gap-2 pt-4">
         <button
           type="button"
-          disabled={items.length === 0 || items.some((p) => p.images.length === 0)}
+          disabled={!valid}
+          onClick={onSubmit}
+          className={primaryBtnCls}
+        >
+          בדיקת המוצר
+        </button>
+        <button type="button" onClick={onScreenshot} className={secondaryBtnCls}>
+          העלאת צילום מסך במקום
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ItemCard({
+  product,
+  isAddition,
+  onTryOn,
+  onCancel,
+}: {
+  product: Product;
+  isAddition: boolean;
+  onTryOn: () => void;
+  onCancel: () => void;
+}) {
+  const [imageIndex, setImageIndex] = useState(0);
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      {product.images.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <div className="aspect-[3/4] w-full overflow-hidden rounded-2xl border border-mida-line bg-mida-surface">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.images[imageIndex]}
+              alt={product.title}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          {product.images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {product.images.slice(0, 6).map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  aria-label={`תמונה ${i + 1}`}
+                  onClick={() => setImageIndex(i)}
+                  className={`h-16 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-colors duration-200 ${
+                    i === imageIndex ? "border-mida-accent" : "border-mida-line"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-mida-line bg-mida-surface text-sm text-mida-muted">
+          אין תמונת מוצר — העלו צילום מסך במקום
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl font-semibold leading-snug text-mida-ink">
+          {product.title}
+        </h1>
+        <div className="flex items-center gap-3 text-mida-muted">
+          {product.price != null && (
+            <span className="text-lg font-medium text-mida-ink" dir="ltr">
+              {product.price.toFixed(2)}{" "}
+              {product.currency === "ILS" ? "₪" : (product.currency ?? "")}
+            </span>
+          )}
+          <span className="text-sm">{product.store}</span>
+        </div>
+        {product.warnings.includes("scrape_failed_demo_data") && (
+          <p className="pt-1 text-xs text-mida-gold">
+            לא הצלחנו לקרוא את החנות הזו — מציגים מוצר הדגמה.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2 pt-4">
+        <button
+          type="button"
+          disabled={product.images.length === 0}
           onClick={onTryOn}
           className={primaryBtnCls}
         >
-          {items.length > 1 ? `מדוד עליי ${items.length} פריטים` : "מדוד עליי"}
+          {isAddition ? "הוספה ללוק" : "מדוד עליי"}
+        </button>
+        <button type="button" onClick={onCancel} className={secondaryBtnCls}>
+          ביטול
         </button>
       </div>
     </div>
@@ -445,17 +491,21 @@ function ProcessingView({
 }
 
 function ResultView({
-  items,
+  wornItems,
   resultUrl,
   sizeRec,
-  onAnother,
+  onAddItem,
+  onReset,
 }: {
-  items: Product[];
+  wornItems: Product[];
   resultUrl: string | null;
   sizeRec: SizeRecommendation | null;
-  onAnother: () => void;
+  onAddItem: () => void;
+  onReset: () => void;
 }) {
-  const buyable = items.filter((p) => /^https?:\/\//.test(p.url));
+  const buyable = wornItems.filter((p) => /^https?:\/\//.test(p.url));
+  const canAddMore = wornItems.length < 6;
+
   return (
     <div className="flex flex-1 flex-col gap-4">
       {resultUrl && (
@@ -468,34 +518,54 @@ function ResultView({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={resultUrl}
-            alt={`הלוק עליך: ${items.map((p) => p.title).join(", ")}`}
+            alt={`הלוק עליך: ${wornItems.map((p) => p.title).join(", ")}`}
             className="w-full"
           />
         </motion.div>
+      )}
+
+      {wornItems.length > 1 && (
+        <p className="text-sm leading-relaxed text-mida-muted">
+          בלוק: {wornItems.map((p) => p.title).join(" · ")}
+        </p>
       )}
 
       {sizeRec ? (
         <SizeRecCard rec={sizeRec} />
       ) : (
         <p className="rounded-2xl border border-mida-line bg-mida-surface p-4 text-sm leading-relaxed text-mida-muted">
-          לא נמצאה טבלת מידות בעמוד המוצר, ולכן אין המלצת מידה לפריטים האלה.
+          לפריט הזה לא נמצאה טבלת מידות, ולכן אין המלצת מידה.
         </p>
       )}
 
       <div className="mt-auto flex flex-col gap-2 pt-2">
+        {canAddMore && (
+          <button type="button" onClick={onAddItem} className={primaryBtnCls}>
+            הוספת פריט נוסף ללוק
+          </button>
+        )}
+        {resultUrl && (
+          <a href={resultUrl} download="mida-look.png" className={secondaryBtnCls}>
+            שמירת הלוק
+          </a>
+        )}
         {buyable.map((p) => (
           <a
             key={p.id}
             href={p.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={buyable.length === 1 ? primaryBtnCls : secondaryBtnCls}
+            className={secondaryBtnCls}
           >
             {buyable.length === 1 ? "לרכישה בחנות" : `לרכישה: ${p.title.slice(0, 30)}`}
           </a>
         ))}
-        <button type="button" onClick={onAnother} className={secondaryBtnCls}>
-          מדידה חדשה
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex h-11 w-full cursor-pointer items-center justify-center rounded-full text-sm font-medium text-mida-muted transition-colors duration-200 hover:text-mida-ink"
+        >
+          מדידה חדשה מאפס
         </button>
       </div>
     </div>
