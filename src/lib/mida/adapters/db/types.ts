@@ -13,6 +13,10 @@ export interface ProductRepo {
   getByUrlHash(urlHash: string): Promise<Product | null>;
   getById(id: string): Promise<Product | null>;
   create(product: Omit<Product, "id" | "createdAt">): Promise<Product>;
+  update(
+    id: string,
+    patch: Partial<Omit<Product, "id" | "urlHash" | "createdAt">>
+  ): Promise<Product | null>;
 }
 
 export interface TryOnRepo {
