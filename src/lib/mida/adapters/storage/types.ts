@@ -1,5 +1,10 @@
 export interface StorageAdapter {
-  put(key: string, data: Buffer, contentType: string): Promise<void>;
+  /**
+   * Store an object under the suggested key and return the canonical key to
+   * persist. Most adapters return the key unchanged; the Vercel Blob adapter
+   * returns the object's public URL.
+   */
+  put(key: string, data: Buffer, contentType: string): Promise<string>;
   get(key: string): Promise<{ data: Buffer; contentType: string } | null>;
   /** Public URL the browser can load the object from. */
   url(key: string): string;

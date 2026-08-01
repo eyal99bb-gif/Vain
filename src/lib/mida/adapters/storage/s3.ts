@@ -28,6 +28,7 @@ export function createS3Storage(): StorageAdapter {
           ContentType: contentType,
         })
       );
+      return key;
     },
     async get(key) {
       try {

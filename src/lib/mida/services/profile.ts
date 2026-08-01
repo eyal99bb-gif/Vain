@@ -59,9 +59,8 @@ export async function addPhotos(
 
   const keys: string[] = [];
   for (const photo of photos) {
-    const key = `${uid}/photos/${crypto.randomUUID()}${photo.ext}`;
-    await storage.put(key, photo.data, photo.mimeType);
-    keys.push(key);
+    const suggested = `${uid}/photos/${crypto.randomUUID()}${photo.ext}`;
+    keys.push(await storage.put(suggested, photo.data, photo.mimeType));
   }
 
   const existing = await repos.profiles.getByUid(uid);
