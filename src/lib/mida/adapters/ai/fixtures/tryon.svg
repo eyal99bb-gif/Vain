@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" width="360" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ECE7E0"/>
+      <stop offset="1" stop-color="#DDD6CC"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A6FA5"/>
+      <stop offset="1" stop-color="#3A5A8C"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="640" fill="url(#bg)"/>
+  <ellipse cx="180" cy="600" rx="90" ry="14" fill="#00000014"/>
+  <g>
+    <circle cx="180" cy="120" r="38" fill="#8A7F72"/>
+    <path d="M180 166 c-40 0 -62 26 -66 62 l-10 96 c-2 14 8 22 18 22 l8 0 6 -70 4 0 -2 62 84 0 -2 -62 4 0 6 70 8 0 c10 0 20 -8 18 -22 l-10 -96 c-4 -36 -26 -62 -66 -62 z" fill="url(#shirt)"/>
+    <path d="M142 338 l-4 128 c0 12 8 20 19 20 s 19 -8 19 -20 l4 -110 8 0 4 110 c0 12 8 20 19 20 s 19 -8 19 -20 l-4 -128 z" fill="#5E564B"/>
+  </g>
+  <text x="180" y="52" text-anchor="middle" font-family="sans-serif" font-size="15" fill="#8A7F72">הדמיית מדידה — MIDA</text>
+</svg>
