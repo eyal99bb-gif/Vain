@@ -1,0 +1,72 @@
+import {
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
+
+export const midaProfiles = pgTable("mida_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  uid: text("uid").notNull().unique(),
+  heightCm: real("height_cm"),
+  weightKg: real("weight_kg"),
+  chestCm: real("chest_cm"),
+  waistCm: real("waist_cm"),
+  hipsCm: real("hips_cm"),
+  inseamCm: real("inseam_cm"),
+  shouldersCm: real("shoulders_cm"),
+  fitPreference: text("fit_preference").notNull().default("regular"),
+  photoKeys: jsonb("photo_keys").notNull().default([]),
+  avatarKey: text("avatar_key"),
+  avatarStatus: text("avatar_status").notNull().default("none"),
+  avatarError: text("avatar_error"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const midaProducts = pgTable("mida_products", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  url: text("url").notNull(),
+  urlHash: text("url_hash").notNull().unique(),
+  store: text("store").notNull(),
+  title: text("title").notNull(),
+  price: real("price"),
+  currency: text("currency"),
+  images: jsonb("images").notNull().default([]),
+  colors: jsonb("colors").notNull().default([]),
+  garmentType: text("garment_type").notNull().default("unknown"),
+  sizeChart: jsonb("size_chart"),
+  sizeChartSource: text("size_chart_source").notNull().default("none"),
+  warnings: jsonb("warnings").notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const midaTryons = pgTable("mida_tryons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  profileId: uuid("profile_id")
+    .notNull()
+    .references(() => midaProfiles.id),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => midaProducts.id),
+  status: text("status").notNull().default("pending"),
+  productImageIndex: integer("product_image_index").notNull().default(0),
+  resultKey: text("result_key"),
+  error: text("error"),
+  sizeRec: jsonb("size_rec"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
