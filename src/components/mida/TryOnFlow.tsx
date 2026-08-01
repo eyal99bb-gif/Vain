@@ -378,7 +378,12 @@ function ProcessingView({
             return;
           }
           if (status === "failed") {
-            onFailed("ההדמיה נכשלה הפעם — נסו שוב.");
+            const detail: string | null = data.tryon.error;
+            onFailed(
+              detail && /[֐-׿]/.test(detail)
+                ? detail // server already produced a Hebrew message
+                : `ההדמיה נכשלה הפעם — נסו שוב.${detail ? ` (${detail})` : ""}`
+            );
             return;
           }
         }

@@ -25,29 +25,40 @@ async function generateImage(
   prompt: string,
   images: ImageInput[]
 ): Promise<GeneratedImage> {
-  const response = await getClient().models.generateContent({
-    model: midaEnv.GEMINI_IMAGE_MODEL,
-    contents: [
-      { role: "user", parts: [{ text: prompt }, ...images.map(imagePart)] },
-    ],
-  });
+  let lastError: Error = new Error("Gemini returned no image");
 
-  const parts = response.candidates?.[0]?.content?.parts ?? [];
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      return {
-        data: Buffer.from(part.inlineData.data, "base64"),
-        mimeType: part.inlineData.mimeType ?? "image/png",
-      };
+  // Image generation occasionally fails transiently (rate limits, 5xx) —
+  // retry once before surfacing the failure.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await getClient().models.generateContent({
+        model: midaEnv.GEMINI_IMAGE_MODEL,
+        contents: [
+          { role: "user", parts: [{ text: prompt }, ...images.map(imagePart)] },
+        ],
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          return {
+            data: Buffer.from(part.inlineData.data, "base64"),
+            mimeType: part.inlineData.mimeType ?? "image/png",
+          };
+        }
+      }
+
+      const blockReason =
+        response.promptFeedback?.blockReason ??
+        response.candidates?.[0]?.finishReason;
+      lastError = new Error(
+        `Gemini returned no image${blockReason ? ` (${blockReason})` : ""}`
+      );
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
   }
-
-  const blockReason =
-    response.promptFeedback?.blockReason ??
-    response.candidates?.[0]?.finishReason;
-  throw new Error(
-    `Gemini returned no image${blockReason ? ` (${blockReason})` : ""}`
-  );
+  throw lastError;
 }
 
 interface LlmSizeChart {

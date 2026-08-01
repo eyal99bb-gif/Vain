@@ -84,22 +84,57 @@ export async function startTryOn(
       const storage = await getStorage();
       const ai = await getAi();
 
-      const avatar = await storage.get(profile.avatarKey!);
-      if (!avatar) throw new Error("avatar missing from storage");
+      // Base image: prefer the user's original uploaded photo. Profiles
+      // created before this change may have a stale demo-SVG avatarKey,
+      // which Gemini rejects as input — the photo keys are always real.
+      const baseKey = profile.photoKeys[0] ?? profile.avatarKey!;
+      const avatar = await storage.get(baseKey);
+      if (!avatar) {
+        throw new Error(
+          "התמונות שלך לא נמצאו באחסון — עברו שוב את בניית הפרופיל והעלו תמונות מחדש"
+        );
+      }
+      if (avatar.contentType.includes("svg")) {
+        throw new Error(
+          "הפרופיל נוצר במצב הדגמה — יש להעלות תמונות מחדש דרך עדכון פרופיל"
+        );
+      }
 
-      // Product images are remote URLs; demo fixture products have none.
+      // Product images are remote URLs (demo fixture products have none).
+      // Store CDNs may bot-block plain fetches, so send browser-like headers
+      // and fall back across the product's images.
       let productImage: { data: Buffer; mimeType: string } | null = null;
-      const imageUrl = product.images[productImageIndex] ?? product.images[0];
-      if (imageUrl) {
-        const res = await fetch(imageUrl, {
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (res.ok) {
-          productImage = {
-            data: Buffer.from(await res.arrayBuffer()),
-            mimeType: res.headers.get("content-type") ?? "image/jpeg",
-          };
+      const candidates = [
+        product.images[productImageIndex],
+        ...product.images,
+      ].filter((u): u is string => !!u);
+      for (const imageUrl of [...new Set(candidates)].slice(0, 3)) {
+        try {
+          const res = await fetch(imageUrl, {
+            signal: AbortSignal.timeout(10_000),
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+              Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
+              Referer: product.url,
+            },
+          });
+          const type = res.headers.get("content-type") ?? "";
+          if (res.ok && type.startsWith("image/") && !type.includes("svg")) {
+            productImage = {
+              data: Buffer.from(await res.arrayBuffer()),
+              mimeType: type,
+            };
+            break;
+          }
+        } catch {
+          // try the next image
         }
+      }
+      if (!productImage && product.images.length > 0) {
+        throw new Error(
+          "לא הצלחנו למשוך את תמונת המוצר מהחנות — נסו מוצר אחר"
+        );
       }
 
       // The chosen size's chart row + the wearer's own measurements let the
