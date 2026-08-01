@@ -44,6 +44,16 @@ export function extractProductPrompt(url: string): string {
   ].join(" ");
 }
 
+/** Prompt for URL-context extraction (model fetches the page itself). */
+export function urlContextPrompt(url: string): string {
+  return [
+    `Extract product data from this page: ${url}`,
+    'Return ONLY minified JSON, no markdown fences: {"title":string,"price":number|null,"currency":string|null,"colors":[string],"garmentType":"top"|"pants"|"dress"|"outerwear"|"skirt"|"unknown","images":[direct product image URLs, up to 5],"sizeChart":{"rows":[{"label":string,"measures":[{"key":"chest"|"waist"|"hips"|"inseam"|"shoulders","minCm":number,"maxCm":number}]}]}|null}',
+    "Convert any inch values to centimeters (×2.54). Use full absolute https image URLs.",
+    "If there is no real size chart on the page, set sizeChart to null. Do not invent data.",
+  ].join("\n");
+}
+
 /** responseSchema for extractProduct (Gemini structured output). */
 export const EXTRACT_PRODUCT_SCHEMA = {
   type: "object",
