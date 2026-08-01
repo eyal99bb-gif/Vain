@@ -19,18 +19,59 @@ export function avatarPrompt(m: Measurements): string {
   ].join(" ");
 }
 
+const MEASURE_LABELS: Record<string, string> = {
+  chest: "chest",
+  waist: "waist",
+  hips: "hips",
+  inseam: "inseam",
+  shoulders: "shoulder width",
+  height: "height",
+};
+
+/**
+ * Fixed virtual try-on prompt. The contract: the FIRST image (the user's own
+ * photo) must stay pixel-faithful everywhere except the garment area — only
+ * the garment is replaced, fitted according to the store's size measurements.
+ */
 export function tryOnPrompt(meta: TryOnMeta): string {
-  return [
-    "Dress the person from the first image in the garment shown in the second image.",
-    "This is a virtual try-on: keep the person's face, hair, skin tone, body shape, pose and proportions from the first image exactly unchanged.",
-    `Garment: ${meta.productTitle}${meta.color ? `, color ${meta.color}` : ""} (${meta.garmentType}).`,
-    meta.size
-      ? `Render the fabric drape realistically for size ${meta.size} on this specific body.`
-      : "Render the fabric drape realistically for this specific body.",
-    "Replace only the relevant clothing; keep other clothing items the person wears where the garment does not cover.",
-    "Keep the light-gray studio background and lighting from the first image.",
-    "Photorealistic result, no text or watermarks.",
-  ].join(" ");
+  const lines = [
+    "TASK: Virtual try-on. Edit the FIRST image only.",
+    "Replace ONLY the garment the person is currently wearing in the covered area with the garment shown in the SECOND image" +
+      ` (${meta.productTitle}${meta.color ? `, color ${meta.color}` : ""}, type: ${meta.garmentType}).`,
+    "PRESERVE EXACTLY, unchanged from the first image: the person's face, expression, hair, skin tone, body shape and proportions, pose, hands, all other clothing items, the background, lighting, shadows, camera angle, framing and image composition. Outside the garment area the image must remain identical to the original photo.",
+    "Reproduce the second image's garment faithfully: same color, fabric, texture, pattern, neckline, sleeves and details. Do not redesign it.",
+  ];
+
+  // Size-accurate drape: give the model the garment's measurements for the
+  // chosen size next to the wearer's own measurements.
+  if (meta.size && meta.sizeRow && Object.keys(meta.sizeRow).length > 0) {
+    const pairs: string[] = [];
+    for (const [key, range] of Object.entries(meta.sizeRow)) {
+      if (!range) continue;
+      const label = MEASURE_LABELS[key] ?? key;
+      const user = meta.userMeasurements?.[key];
+      pairs.push(
+        `${label} ${range.min}-${range.max} cm${user ? ` (wearer's ${label}: ${user} cm)` : ""}`
+      );
+    }
+    if (pairs.length > 0) {
+      lines.push(
+        `FIT: Render the garment in size ${meta.size}, whose measurements are: ${pairs.join("; ")}. Drape the fabric realistically for these numbers on this specific body — show tightness where the wearer's measurement approaches or exceeds the garment's, and looseness where the garment is larger.`
+      );
+    }
+  } else if (meta.size) {
+    lines.push(
+      `FIT: Render the garment in size ${meta.size}, draped realistically on this specific body.`
+    );
+  } else {
+    lines.push("FIT: Drape the garment realistically on this specific body.");
+  }
+
+  lines.push(
+    "OUTPUT: One photorealistic image, same resolution and aspect as the first image. No text, no watermark, no added objects or people."
+  );
+
+  return lines.join("\n");
 }
 
 export function extractProductPrompt(url: string): string {

@@ -102,6 +102,24 @@ export async function startTryOn(
         }
       }
 
+      // The chosen size's chart row + the wearer's own measurements let the
+      // prompt describe the exact fit instead of guessing.
+      const chosenRow = sizeRec
+        ? (product.sizeChart?.rows.find((r) => r.label === sizeRec.size)
+            ?.values ?? null)
+        : null;
+      const userMeasurements: Partial<Record<string, number>> = {};
+      for (const [key, value] of Object.entries({
+        chest: profile.chestCm,
+        waist: profile.waistCm,
+        hips: profile.hipsCm,
+        inseam: profile.inseamCm,
+        shoulders: profile.shouldersCm,
+        height: profile.heightCm,
+      })) {
+        if (value != null) userMeasurements[key] = value;
+      }
+
       const result = await ai.generateTryOn(
         { data: avatar.data, mimeType: avatar.contentType },
         productImage ?? { data: avatar.data, mimeType: avatar.contentType },
@@ -110,6 +128,10 @@ export async function startTryOn(
           garmentType: product.garmentType,
           size: sizeRec?.size ?? null,
           color: product.colors[0] ?? null,
+          sizeRow: chosenRow,
+          userMeasurements: Object.keys(userMeasurements).length
+            ? userMeasurements
+            : null,
         }
       );
 
