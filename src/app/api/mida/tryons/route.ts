@@ -7,10 +7,15 @@ import { readUid } from "@/lib/mida/uid";
 import { getProfile } from "@/lib/mida/services/profile";
 import { startTryOn, toTryOnView } from "@/lib/mida/services/tryon";
 
-const bodySchema = z.object({
-  productId: z.string().min(1),
-  productImageIndex: z.number().int().min(0).max(20).optional(),
-});
+const bodySchema = z
+  .object({
+    productId: z.string().min(1).optional(),
+    productIds: z.array(z.string().min(1)).min(1).max(3).optional(),
+    productImageIndex: z.number().int().min(0).max(20).optional(),
+  })
+  .refine((b) => b.productId || b.productIds?.length, {
+    message: "productId or productIds required",
+  });
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -25,7 +30,7 @@ export async function POST(request: Request) {
 
   const result = await startTryOn(
     profile,
-    parsed.data.productId,
+    parsed.data.productIds ?? [parsed.data.productId!],
     parsed.data.productImageIndex ?? 0
   );
   if (!result.ok) {

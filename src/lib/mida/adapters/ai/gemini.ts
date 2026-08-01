@@ -5,6 +5,7 @@ import type { GarmentType, ScrapedProduct } from "../../types";
 import type { AiAdapter, GeneratedImage, ImageInput } from "./types";
 import {
   avatarPrompt,
+  DESCRIBE_GARMENT_PROMPT,
   EXTRACT_PRODUCT_SCHEMA,
   extractProductPrompt,
   tryOnPrompt,
@@ -149,8 +150,38 @@ export function createGeminiAdapter(): AiAdapter {
       return generateImage(avatarPrompt(measurements), photos);
     },
 
-    async generateTryOn(avatar, productImage, meta) {
-      return generateImage(tryOnPrompt(meta), [avatar, productImage]);
+    async generateTryOn(avatar, productImages, meta) {
+      return generateImage(tryOnPrompt(meta), [avatar, ...productImages]);
+    },
+
+    async describeGarmentImage(image) {
+      try {
+        const response = await getClient().models.generateContent({
+          model: midaEnv.GEMINI_TEXT_MODEL,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: DESCRIBE_GARMENT_PROMPT }, imagePart(image)],
+            },
+          ],
+          config: { responseMimeType: "application/json" },
+        });
+        const raw = response.text;
+        if (!raw) return {};
+        const parsed = JSON.parse(
+          raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim()
+        );
+        return {
+          title: typeof parsed.title === "string" ? parsed.title : undefined,
+          garmentType:
+            typeof parsed.garmentType === "string"
+              ? parsed.garmentType
+              : undefined,
+          colors: Array.isArray(parsed.colors) ? parsed.colors : undefined,
+        };
+      } catch {
+        return {};
+      }
     },
 
     async extractProduct(html, url) {

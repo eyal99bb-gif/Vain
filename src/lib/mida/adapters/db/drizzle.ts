@@ -71,6 +71,7 @@ function toTryOn(row: TryOnRow): TryOn {
     id: row.id,
     profileId: row.profileId,
     productId: row.productId,
+    productIds: (row.productIds as string[]) ?? [row.productId],
     status: row.status as TryOnStatus,
     productImageIndex: row.productImageIndex,
     resultKey: row.resultKey,

@@ -1,15 +1,23 @@
 import { getAi } from "../adapters/ai";
+import type { GarmentRef, ImageInput } from "../adapters/ai";
 import { getRepos } from "../adapters/db";
 import { getStorage } from "../adapters/storage";
+import type { StorageAdapter } from "../adapters/storage";
 import { runJob } from "../jobs";
 import { recommendSize } from "../sizing/recommend";
-import type { Profile, TryOn } from "../types";
+import type { Product, Profile, TryOn } from "../types";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
   "image/svg+xml": ".svg",
+};
+
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
 };
 
 export interface TryOnView {
@@ -32,13 +40,54 @@ export async function toTryOnView(tryon: TryOn): Promise<TryOnView> {
 }
 
 /**
- * Create a try-on: the size recommendation is computed synchronously (pure
- * function — the size answer never waits on Gemini); image generation runs
+ * Fetch one product's image. Handles both remote store URLs (browser-like
+ * headers — CDNs bot-block bare fetches) and images stored by us (screenshot
+ * uploads, whose URLs are served by /api/files).
+ */
+async function fetchProductImage(
+  product: Product,
+  preferredIndex: number,
+  storage: StorageAdapter
+): Promise<ImageInput | null> {
+  const candidates = [
+    product.images[preferredIndex],
+    ...product.images,
+  ].filter((u): u is string => !!u);
+
+  for (const imageUrl of [...new Set(candidates)].slice(0, 3)) {
+    // Our own stored objects (screenshot products) — read from storage.
+    if (imageUrl.startsWith("/api/files/")) {
+      const obj = await storage.get(imageUrl.slice("/api/files/".length));
+      if (obj && !obj.contentType.includes("svg")) {
+        return { data: obj.data, mimeType: obj.contentType };
+      }
+      continue;
+    }
+    try {
+      const res = await fetch(imageUrl, {
+        signal: AbortSignal.timeout(10_000),
+        headers: { ...BROWSER_HEADERS, Referer: product.url || imageUrl },
+      });
+      const type = res.headers.get("content-type") ?? "";
+      if (res.ok && type.startsWith("image/") && !type.includes("svg")) {
+        return { data: Buffer.from(await res.arrayBuffer()), mimeType: type };
+      }
+    } catch {
+      // try the next image
+    }
+  }
+  return null;
+}
+
+/**
+ * Create a try-on for 1-3 products dressed together: the size recommendation
+ * is computed synchronously (pure function — the size answer never waits on
+ * Gemini) for the first product that has a size chart; image generation runs
  * as a post-response job.
  */
 export async function startTryOn(
   profile: Profile,
-  productId: string,
+  productIds: string[],
   productImageIndex: number
 ): Promise<{ ok: true; tryon: TryOn } | { ok: false; error: string }> {
   const repos = await getRepos();
@@ -46,11 +95,19 @@ export async function startTryOn(
   if (profile.avatarStatus !== "ready" || !profile.avatarKey) {
     return { ok: false, error: "no_avatar" };
   }
-  const product = await repos.products.getById(productId);
-  if (!product) return { ok: false, error: "product_not_found" };
 
+  const products: Product[] = [];
+  for (const id of productIds.slice(0, 3)) {
+    const product = await repos.products.getById(id);
+    if (!product) return { ok: false, error: "product_not_found" };
+    products.push(product);
+  }
+  if (products.length === 0) return { ok: false, error: "product_not_found" };
+
+  // Size recommendation applies to the first product that has a size chart.
+  const sizedProduct = products.find((p) => p.sizeChart) ?? null;
   const sizeRec =
-    product.sizeChart && profile.heightCm && profile.weightKg
+    sizedProduct?.sizeChart && profile.heightCm && profile.weightKg
       ? recommendSize({
           measurements: {
             heightCm: profile.heightCm,
@@ -62,15 +119,16 @@ export async function startTryOn(
             shouldersCm: profile.shouldersCm ?? undefined,
           },
           fitPreference: profile.fitPreference,
-          garmentType: product.garmentType,
-          sizeChart: product.sizeChart,
-          sizeChartSource: product.sizeChartSource,
+          garmentType: sizedProduct.garmentType,
+          sizeChart: sizedProduct.sizeChart,
+          sizeChartSource: sizedProduct.sizeChartSource,
         })
       : null;
 
   const tryon = await repos.tryons.create({
     profileId: profile.id,
-    productId,
+    productId: products[0].id,
+    productIds: products.map((p) => p.id),
     status: "pending",
     productImageIndex,
     resultKey: null,
@@ -100,49 +158,36 @@ export async function startTryOn(
         );
       }
 
-      // Product images are remote URLs (demo fixture products have none).
-      // Store CDNs may bot-block plain fetches, so send browser-like headers
-      // and fall back across the product's images.
-      let productImage: { data: Buffer; mimeType: string } | null = null;
-      const candidates = [
-        product.images[productImageIndex],
-        ...product.images,
-      ].filter((u): u is string => !!u);
-      for (const imageUrl of [...new Set(candidates)].slice(0, 3)) {
-        try {
-          const res = await fetch(imageUrl, {
-            signal: AbortSignal.timeout(10_000),
-            headers: {
-              "User-Agent":
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-              Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
-              Referer: product.url,
-            },
-          });
-          const type = res.headers.get("content-type") ?? "";
-          if (res.ok && type.startsWith("image/") && !type.includes("svg")) {
-            productImage = {
-              data: Buffer.from(await res.arrayBuffer()),
-              mimeType: type,
-            };
-            break;
-          }
-        } catch {
-          // try the next image
-        }
-      }
-      if (!productImage && product.images.length > 0) {
-        throw new Error(
-          "לא הצלחנו למשוך את תמונת המוצר מהחנות — נסו מוצר אחר"
+      // One image per garment, in order. Every garment must have an image —
+      // dressing "blind" produces made-up clothes.
+      const productImages: ImageInput[] = [];
+      const garments: GarmentRef[] = [];
+      for (const [i, product] of products.entries()) {
+        const image = await fetchProductImage(
+          product,
+          i === 0 ? productImageIndex : 0,
+          storage
         );
+        if (!image) {
+          throw new Error(
+            `לא הצלחנו למשוך את התמונה של "${product.title}" — נסו להעלות צילום מסך של המוצר`
+          );
+        }
+        productImages.push(image);
+        garments.push({
+          title: product.title,
+          garmentType: product.garmentType,
+          color: product.colors[0] ?? null,
+        });
       }
 
       // The chosen size's chart row + the wearer's own measurements let the
       // prompt describe the exact fit instead of guessing.
-      const chosenRow = sizeRec
-        ? (product.sizeChart?.rows.find((r) => r.label === sizeRec.size)
-            ?.values ?? null)
-        : null;
+      const chosenRow =
+        sizeRec && sizedProduct
+          ? (sizedProduct.sizeChart?.rows.find((r) => r.label === sizeRec.size)
+              ?.values ?? null)
+          : null;
       const userMeasurements: Partial<Record<string, number>> = {};
       for (const [key, value] of Object.entries({
         chest: profile.chestCm,
@@ -157,12 +202,11 @@ export async function startTryOn(
 
       const result = await ai.generateTryOn(
         { data: avatar.data, mimeType: avatar.contentType },
-        productImage ?? { data: avatar.data, mimeType: avatar.contentType },
+        productImages,
         {
-          productTitle: product.title,
-          garmentType: product.garmentType,
+          garments,
           size: sizeRec?.size ?? null,
-          color: product.colors[0] ?? null,
+          sizeGarmentTitle: sizedProduct?.title ?? null,
           sizeRow: chosenRow,
           userMeasurements: Object.keys(userMeasurements).length
             ? userMeasurements

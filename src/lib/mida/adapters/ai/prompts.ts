@@ -28,19 +28,36 @@ const MEASURE_LABELS: Record<string, string> = {
   height: "height",
 };
 
+const ORDINALS = ["SECOND", "THIRD", "FOURTH"];
+
 /**
  * Fixed virtual try-on prompt. The contract: the FIRST image (the user's own
- * photo) must stay pixel-faithful everywhere except the garment area — only
- * the garment is replaced, fitted according to the store's size measurements.
+ * photo) must stay pixel-faithful everywhere except the garment areas; each
+ * garment is copied one-to-one from its reference image, fitted according to
+ * the store's size measurements.
  */
 export function tryOnPrompt(meta: TryOnMeta): string {
   const lines = [
     "TASK: Virtual try-on. Edit the FIRST image only.",
-    "Replace ONLY the garment the person is currently wearing in the covered area with the garment shown in the SECOND image" +
-      ` (${meta.productTitle}${meta.color ? `, color ${meta.color}` : ""}, type: ${meta.garmentType}).`,
-    "PRESERVE EXACTLY, unchanged from the first image: the person's face, expression, hair, skin tone, body shape and proportions, pose, hands, all other clothing items, the background, lighting, shadows, camera angle, framing and image composition. Outside the garment area the image must remain identical to the original photo.",
-    "Reproduce the second image's garment faithfully: same color, fabric, texture, pattern, neckline, sleeves and details. Do not redesign it.",
   ];
+
+  meta.garments.forEach((g, i) => {
+    const ordinal = ORDINALS[i] ?? `${i + 2}th`;
+    lines.push(
+      `Dress the person in the garment shown in the ${ordinal} image` +
+        ` (${g.title}${g.color ? `, color ${g.color}` : ""}, type: ${g.garmentType}), replacing whatever they currently wear in that area.`
+    );
+  });
+  if (meta.garments.length > 1) {
+    lines.push(
+      "Dress the person in ALL the garments above together, as one coherent outfit."
+    );
+  }
+
+  lines.push(
+    "PRESERVE EXACTLY, unchanged from the first image: the person's face, expression, hair, skin tone, body shape and proportions, pose, hands, any clothing in areas the new garments do not cover, the background, lighting, shadows, camera angle, framing and image composition. Outside the garment areas the image must remain identical to the original photo.",
+    "GARMENT FIDELITY — copy each garment EXACTLY one-to-one from its reference image: identical colors and shades, prints, graphics, logos, text, patterns, fabric and texture, collar/neckline, sleeves, buttons, zippers, pockets, seams, stitching, trims, cut and length. Never substitute, redesign, simplify, recolor, or invent details that are not in the reference image."
+  );
 
   // Size-accurate drape: give the model the garment's measurements for the
   // chosen size next to the wearer's own measurements.
@@ -56,7 +73,7 @@ export function tryOnPrompt(meta: TryOnMeta): string {
     }
     if (pairs.length > 0) {
       lines.push(
-        `FIT: Render the garment in size ${meta.size}, whose measurements are: ${pairs.join("; ")}. Drape the fabric realistically for these numbers on this specific body — show tightness where the wearer's measurement approaches or exceeds the garment's, and looseness where the garment is larger.`
+        `FIT: Render ${meta.sizeGarmentTitle ? `"${meta.sizeGarmentTitle}"` : "the garment"} in size ${meta.size}, whose measurements are: ${pairs.join("; ")}. Drape the fabric realistically for these numbers on this specific body — show tightness where the wearer's measurement approaches or exceeds the garment's, and looseness where the garment is larger.`
       );
     }
   } else if (meta.size) {
@@ -64,15 +81,22 @@ export function tryOnPrompt(meta: TryOnMeta): string {
       `FIT: Render the garment in size ${meta.size}, draped realistically on this specific body.`
     );
   } else {
-    lines.push("FIT: Drape the garment realistically on this specific body.");
+    lines.push("FIT: Drape the garments realistically on this specific body.");
   }
 
   lines.push(
-    "OUTPUT: One photorealistic image, same resolution and aspect as the first image. No text, no watermark, no added objects or people."
+    "OUTPUT: One photorealistic image, same resolution, aspect and composition as the first image, showing exactly ONE person — the same person in the same position and scale as the input photo. Never produce a before/after, side-by-side, collage or duplicate figure. No text, no watermark, no added objects or people."
   );
 
   return lines.join("\n");
 }
+
+/** Prompt for describing a garment from a user-uploaded screenshot. */
+export const DESCRIBE_GARMENT_PROMPT = [
+  "The image is a screenshot or photo of a clothing product.",
+  'Return ONLY minified JSON: {"title":short product name in Hebrew,"garmentType":"top"|"pants"|"dress"|"outerwear"|"skirt"|"unknown","colors":[color names in Hebrew]}',
+  "Do not invent details you cannot see.",
+].join("\n");
 
 export function extractProductPrompt(url: string): string {
   return [
