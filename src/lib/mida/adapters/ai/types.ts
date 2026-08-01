@@ -15,6 +15,10 @@ export interface TryOnMeta {
   garmentType: string;
   size: string | null;
   color: string | null;
+  /** The chosen size row's measurement ranges from the store chart, in cm. */
+  sizeRow: Partial<Record<string, { min: number; max: number }>> | null;
+  /** The user's body measurements in cm (girths possibly estimated). */
+  userMeasurements: Partial<Record<string, number>> | null;
 }
 
 export interface AiAdapter {

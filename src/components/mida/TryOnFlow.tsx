@@ -43,6 +43,16 @@ function Spinner() {
 export default function TryOnFlow() {
   const [phase, setPhase] = useState<Phase>({ name: "idle" });
   const [url, setUrl] = useState("");
+  const [demoMode, setDemoMode] = useState(false);
+
+  useEffect(() => {
+    // Surface server misconfiguration: without a Gemini key every result is
+    // a canned demo image, which otherwise looks like a silent failure.
+    fetch("/api/mida/health")
+      .then((res) => res.json())
+      .then((data) => setDemoMode(data.aiMode === "demo"))
+      .catch(() => {});
+  }, []);
 
   const ingest = async () => {
     setPhase({ name: "ingesting" });
@@ -94,6 +104,15 @@ export default function TryOnFlow() {
 
   return (
     <div className="flex flex-1 flex-col gap-5 py-4">
+      {demoMode && (
+        <p
+          role="alert"
+          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        >
+          השרת רץ ללא מפתח Gemini — התוצאות שתראו הן הדגמה בלבד. יש להגדיר את
+          GEMINI_API_KEY בהגדרות השרת ולפרוס מחדש.
+        </p>
+      )}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={phase.name}
