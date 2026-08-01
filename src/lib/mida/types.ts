@@ -34,6 +34,7 @@ export type AvatarStatus = "none" | "pending" | "ready" | "failed";
 export interface Profile {
   id: string;
   uid: string;
+  name: string;
   heightCm: number | null;
   weightKg: number | null;
   chestCm: number | null;

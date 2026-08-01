@@ -10,7 +10,8 @@ import {
 
 export const midaProfiles = pgTable("mida_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
-  uid: text("uid").notNull().unique(),
+  uid: text("uid").notNull(),
+  name: text("name").notNull().default("הפרופיל שלי"),
   heightCm: real("height_cm"),
   weightKg: real("weight_kg"),
   chestCm: real("chest_cm"),

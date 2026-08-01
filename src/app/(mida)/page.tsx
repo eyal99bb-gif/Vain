@@ -1,18 +1,33 @@
 import Link from "next/link";
-import { readUid } from "@/lib/mida/uid";
-import { getProfile } from "@/lib/mida/services/profile";
+import { getActiveProfile } from "@/lib/mida/services/profile";
+import { getRepos } from "@/lib/mida/adapters/db";
+import { getStorage } from "@/lib/mida/adapters/storage";
 
 export default async function HomePage() {
-  const uid = await readUid();
-  const profile = uid ? await getProfile(uid) : null;
+  const profile = await getActiveProfile();
   const hasAvatar = profile?.avatarStatus === "ready";
+
+  // Recent looks for the active profile — the seed of the virtual closet.
+  let recentLooks: { id: string; url: string }[] = [];
+  if (profile) {
+    const repos = await getRepos();
+    const storage = await getStorage();
+    recentLooks = (await repos.tryons.listByProfile(profile.id, 6))
+      .filter((t) => t.status === "ready" && t.resultKey)
+      .map((t) => ({ id: t.id, url: storage.url(t.resultKey!) }));
+  }
 
   const ctaHref = hasAvatar ? "/tryon" : "/onboarding";
   const ctaLabel = hasAvatar ? "למדידה חדשה" : "בונים לך דמות";
 
   return (
-    <div className="flex flex-1 flex-col justify-center gap-10 py-8">
+    <div className="flex flex-1 flex-col justify-center gap-8 py-8">
       <section className="flex flex-col gap-4">
+        {profile && hasAvatar ? (
+          <p className="text-sm font-medium text-mida-accent-deep">
+            היי, {profile.name} 👋
+          </p>
+        ) : null}
         <h1 className="font-display text-4xl font-bold leading-tight text-mida-ink">
           תמדוד לפני
           <br />
@@ -24,35 +39,52 @@ export default async function HomePage() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-3">
-        {[
-          {
-            title: "פרופיל גוף אישי",
-            text: "תמונה + מידות, פעם אחת בלבד",
-          },
-          {
-            title: "הדמיה עליך",
-            text: "רואים את הבגד על הדמות שלך תוך שניות",
-          },
-          {
-            title: "המלצת מידה חכמה",
-            text: "הצלבה בין המידות שלך לטבלת החנות",
-          },
-        ].map((f, i) => (
-          <div
-            key={f.title}
-            className="flex items-center gap-4 rounded-2xl border border-mida-line bg-mida-surface p-4"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mida-accent-soft font-display text-base font-bold text-mida-accent-deep">
-              {i + 1}
-            </span>
-            <div>
-              <h2 className="font-semibold text-mida-ink">{f.title}</h2>
-              <p className="text-sm text-mida-muted">{f.text}</p>
-            </div>
+      {recentLooks.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-mida-ink">
+            המדידות האחרונות של {profile!.name}
+          </h2>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {recentLooks.map((look) => (
+              <a
+                key={look.id}
+                href={look.url}
+                target="_blank"
+                rel="noopener"
+                className="h-32 w-24 shrink-0 overflow-hidden rounded-xl border border-mida-line bg-mida-surface"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={look.url}
+                  alt="מדידה שמורה"
+                  className="h-full w-full object-cover"
+                />
+              </a>
+            ))}
           </div>
-        ))}
-      </section>
+        </section>
+      ) : (
+        <section className="flex flex-col gap-3">
+          {[
+            { title: "פרופיל גוף אישי", text: "תמונה + מידות, פעם אחת בלבד" },
+            { title: "הדמיה עליך", text: "רואים את הבגד על הדמות שלך תוך שניות" },
+            { title: "המלצת מידה חכמה", text: "הצלבה בין המידות שלך לטבלת החנות" },
+          ].map((f, i) => (
+            <div
+              key={f.title}
+              className="flex items-center gap-4 rounded-2xl border border-mida-line bg-mida-surface p-4"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mida-accent-soft font-display text-base font-bold text-mida-accent-deep">
+                {i + 1}
+              </span>
+              <div>
+                <h2 className="font-semibold text-mida-ink">{f.title}</h2>
+                <p className="text-sm text-mida-muted">{f.text}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <Link
@@ -61,14 +93,12 @@ export default async function HomePage() {
         >
           {ctaLabel}
         </Link>
-        {hasAvatar && (
-          <Link
-            href="/onboarding"
-            className="text-center text-sm text-mida-muted underline-offset-4 hover:underline"
-          >
-            עדכון פרופיל ומידות
-          </Link>
-        )}
+        <Link
+          href="/profiles"
+          className="text-center text-sm text-mida-muted underline-offset-4 hover:underline"
+        >
+          {profile ? "החלפת פרופיל ועריכה" : "ניהול פרופילים"}
+        </Link>
       </section>
     </div>
   );

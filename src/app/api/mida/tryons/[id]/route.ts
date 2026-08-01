@@ -14,9 +14,9 @@ export async function GET(
   const tryon = await repos.tryons.getById(id);
   if (!tryon) return Response.json({ error: "not_found" }, { status: 404 });
 
-  // Ownership check: the try-on must belong to this uid's profile.
-  const profile = await repos.profiles.getByUid(uid);
-  if (!profile || tryon.profileId !== profile.id) {
+  // Ownership check: the try-on's profile must belong to this uid.
+  const profile = await repos.profiles.getById(tryon.profileId);
+  if (!profile || profile.uid !== uid) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 

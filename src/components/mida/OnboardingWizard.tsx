@@ -53,9 +53,31 @@ function Spinner() {
   );
 }
 
+interface ExistingProfile {
+  name: string;
+  photoCount: number;
+  heightCm: number | null;
+  weightKg: number | null;
+  chestCm: number | null;
+  waistCm: number | null;
+  hipsCm: number | null;
+  inseamCm: number | null;
+  shouldersCm: number | null;
+  fitPreference: string;
+}
+
 export default function OnboardingWizard() {
   const [step, setStep] = useState<Step>("photos");
   const [error, setError] = useState<string | null>(null);
+  const [existing, setExisting] = useState<ExistingProfile | null>(null);
+
+  // Editing an existing profile: prefill values and allow keeping photos.
+  useEffect(() => {
+    fetch("/api/mida/profile")
+      .then((res) => res.json())
+      .then((data) => setExisting(data.profile ?? null))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="flex flex-1 flex-col gap-5 py-4">
@@ -91,6 +113,7 @@ export default function OnboardingWizard() {
         >
           {step === "photos" && (
             <PhotoStep
+              existingPhotoCount={existing?.photoCount ?? 0}
               onDone={() => {
                 setError(null);
                 setStep("measurements");
@@ -100,6 +123,7 @@ export default function OnboardingWizard() {
           )}
           {step === "measurements" && (
             <MeasurementsStep
+              existing={existing}
               onDone={() => {
                 setError(null);
                 setStep("avatar");
@@ -115,9 +139,11 @@ export default function OnboardingWizard() {
 }
 
 function PhotoStep({
+  existingPhotoCount,
   onDone,
   onError,
 }: {
+  existingPhotoCount: number;
   onDone: () => void;
   onError: (msg: string) => void;
 }) {
@@ -238,7 +264,7 @@ function PhotoStep({
         onChange={(e) => pick(e.target.files)}
       />
 
-      <div className="mt-auto pt-4">
+      <div className="mt-auto flex flex-col gap-2 pt-4">
         <button
           type="button"
           disabled={items.length === 0 || uploading}
@@ -247,6 +273,15 @@ function PhotoStep({
         >
           {uploading ? <Spinner /> : "המשך"}
         </button>
+        {existingPhotoCount > 0 && items.length === 0 && (
+          <button
+            type="button"
+            onClick={onDone}
+            className="flex h-11 w-full cursor-pointer items-center justify-center rounded-full text-sm font-medium text-mida-muted transition-colors duration-200 hover:text-mida-ink"
+          >
+            להשאיר את התמונות הקיימות ({existingPhotoCount})
+          </button>
+        )}
       </div>
     </div>
   );
@@ -279,15 +314,35 @@ const FIT_OPTIONS = [
 ] as const;
 
 function MeasurementsStep({
+  existing,
   onDone,
   onError,
 }: {
+  existing: ExistingProfile | null;
   onDone: () => void;
   onError: (msg: string) => void;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [fit, setFit] = useState<string>("regular");
-  const [showOptional, setShowOptional] = useState(false);
+  // Prefill lazily from the profile being edited: this step mounts after the
+  // photos step, by which point the profile fetch has resolved.
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    const next: Record<string, string> = {};
+    if (existing) {
+      for (const key of ["heightCm","weightKg","chestCm","waistCm","hipsCm","inseamCm","shouldersCm"] as const) {
+        const v = existing[key];
+        if (v != null) next[key] = String(v);
+      }
+    }
+    return next;
+  });
+  const [name, setName] = useState(() =>
+    existing && existing.name !== "הפרופיל שלי" ? existing.name : ""
+  );
+  const [fit, setFit] = useState<string>(
+    () => existing?.fitPreference || "regular"
+  );
+  const [showOptional, setShowOptional] = useState(
+    () => !!(existing?.chestCm || existing?.waistCm)
+  );
   const [saving, setSaving] = useState(false);
 
   const set = (key: string, v: string) =>
@@ -300,6 +355,7 @@ function MeasurementsStep({
     setSaving(true);
     try {
       const body: Record<string, unknown> = { fitPreference: fit };
+      if (name.trim()) body.name = name.trim();
       for (const f of [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS]) {
         const n = parseFloat(values[f.key] ?? "");
         if (Number.isFinite(n)) body[f.key] = n;
@@ -342,6 +398,17 @@ function MeasurementsStep({
 
   return (
     <div className="flex flex-1 flex-col gap-4">
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-mida-ink">שם הפרופיל</span>
+        <input
+          type="text"
+          placeholder="למשל: שלי, גיל, אמא…"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={40}
+          className={inputCls}
+        />
+      </label>
       <div className="grid grid-cols-2 gap-3">
         {REQUIRED_FIELDS.map(renderField)}
       </div>

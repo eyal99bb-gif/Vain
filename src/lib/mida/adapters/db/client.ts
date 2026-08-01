@@ -10,7 +10,8 @@ import { midaEnv } from "../../env";
 const ENSURE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS mida_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  uid text NOT NULL UNIQUE,
+  uid text NOT NULL,
+  name text NOT NULL DEFAULT 'הפרופיל שלי',
   height_cm real,
   weight_kg real,
   chest_cm real,
@@ -62,6 +63,9 @@ CREATE TABLE IF NOT EXISTS mida_files (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE mida_tryons ADD COLUMN IF NOT EXISTS product_ids jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE mida_profiles ADD COLUMN IF NOT EXISTS name text NOT NULL DEFAULT 'הפרופיל שלי';
+ALTER TABLE mida_profiles DROP CONSTRAINT IF EXISTS mida_profiles_uid_key;
+CREATE INDEX IF NOT EXISTS mida_profiles_uid_idx ON mida_profiles (uid);
 `;
 
 const GLOBAL_KEY = "__midaPg";

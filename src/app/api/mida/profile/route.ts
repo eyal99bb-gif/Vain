@@ -1,19 +1,28 @@
 import { z } from "zod";
 import { ensureUid, readUid } from "@/lib/mida/uid";
 import {
-  getProfile,
+  getActiveProfile,
+  listProfiles,
   toView,
   upsertMeasurements,
 } from "@/lib/mida/services/profile";
 
 export async function GET() {
   const uid = await readUid();
-  if (!uid) return Response.json({ profile: null });
-  const profile = await getProfile(uid);
-  return Response.json({ profile: profile ? await toView(profile) : null });
+  if (!uid) return Response.json({ profile: null, profiles: [] });
+
+  const [active, all] = await Promise.all([
+    getActiveProfile(),
+    listProfiles(uid),
+  ]);
+  return Response.json({
+    profile: active ? await toView(active) : null,
+    profiles: await Promise.all(all.map(toView)),
+  });
 }
 
 const measurementsSchema = z.object({
+  name: z.string().trim().min(1).max(40).optional(),
   heightCm: z.number().min(100).max(230),
   weightKg: z.number().min(25).max(300),
   chestCm: z.number().min(50).max(200).nullish(),
