@@ -19,6 +19,8 @@ export interface GarmentRef {
 export interface TryOnMeta {
   /** Garments in the same order as the product images (1-3). */
   garments: GarmentRef[];
+  /** True when the base image is a previous try-on result (layered look). */
+  isLayered: boolean;
   /** Size fit info for the garment that has a size chart (if any). */
   size: string | null;
   /** Title of the garment the size applies to. */

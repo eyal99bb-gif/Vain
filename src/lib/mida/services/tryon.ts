@@ -88,12 +88,29 @@ async function fetchProductImage(
 export async function startTryOn(
   profile: Profile,
   productIds: string[],
-  productImageIndex: number
+  productImageIndex: number,
+  baseTryOnId?: string
 ): Promise<{ ok: true; tryon: TryOn } | { ok: false; error: string }> {
   const repos = await getRepos();
 
   if (profile.avatarStatus !== "ready" || !profile.avatarKey) {
     return { ok: false, error: "no_avatar" };
+  }
+
+  // Layered look: dress the new garment on top of a previous result, so
+  // already-dressed garments stay fixed in the base image.
+  let baseResultKey: string | null = null;
+  if (baseTryOnId) {
+    const baseTryOn = await repos.tryons.getById(baseTryOnId);
+    if (
+      !baseTryOn ||
+      baseTryOn.profileId !== profile.id ||
+      baseTryOn.status !== "ready" ||
+      !baseTryOn.resultKey
+    ) {
+      return { ok: false, error: "base_tryon_not_ready" };
+    }
+    baseResultKey = baseTryOn.resultKey;
   }
 
   const products: Product[] = [];
@@ -142,10 +159,12 @@ export async function startTryOn(
       const storage = await getStorage();
       const ai = await getAi();
 
-      // Base image: prefer the user's original uploaded photo. Profiles
-      // created before this change may have a stale demo-SVG avatarKey,
-      // which Gemini rejects as input — the photo keys are always real.
-      const baseKey = profile.photoKeys[0] ?? profile.avatarKey!;
+      // Base image: a previous try-on result when layering, otherwise the
+      // user's original uploaded photo. Profiles created before this change
+      // may have a stale demo-SVG avatarKey, which Gemini rejects as input —
+      // the photo keys are always real.
+      const baseKey =
+        baseResultKey ?? profile.photoKeys[0] ?? profile.avatarKey!;
       const avatar = await storage.get(baseKey);
       if (!avatar) {
         throw new Error(
@@ -205,6 +224,7 @@ export async function startTryOn(
         productImages,
         {
           garments,
+          isLayered: baseResultKey !== null,
           size: sizeRec?.size ?? null,
           sizeGarmentTitle: sizedProduct?.title ?? null,
           sizeRow: chosenRow,

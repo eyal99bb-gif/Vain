@@ -53,6 +53,11 @@ export function tryOnPrompt(meta: TryOnMeta): string {
       "Dress the person in ALL the garments above together, as one coherent outfit."
     );
   }
+  if (meta.isLayered) {
+    lines.push(
+      "The person may already be wearing garments added in previous try-on steps — keep those EXACTLY intact; add or replace clothing only in the area covered by the new garment."
+    );
+  }
 
   lines.push(
     "PRESERVE EXACTLY, unchanged from the first image: the person's face, expression, hair, skin tone, body shape and proportions, pose, hands, any clothing in areas the new garments do not cover, the background, lighting, shadows, camera angle, framing and image composition. Outside the garment areas the image must remain identical to the original photo.",

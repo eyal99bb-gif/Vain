@@ -28,9 +28,10 @@ async function generateImage(
 ): Promise<GeneratedImage> {
   let lastError: Error = new Error("Gemini returned no image");
 
-  // Image generation occasionally fails transiently (rate limits, 5xx) —
-  // retry once before surfacing the failure.
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // Image generation occasionally fails transiently (rate limits, model
+  // overload 503s) — retry with a short pause before surfacing the failure.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 3000 * attempt));
     try {
       const response = await getClient().models.generateContent({
         model: midaEnv.GEMINI_IMAGE_MODEL,
