@@ -216,7 +216,7 @@ export default function ProfileManager() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && create()}
             maxLength={40}
-            className="h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-base text-mida-ink placeholder:text-mida-muted/60 focus:border-mida-accent focus:outline-none"
+            className="h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-base text-mida-ink placeholder:text-mida-placeholder focus:border-mida-accent focus:outline-none"
           />
         </label>
         <button

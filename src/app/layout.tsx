@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Frank_Ruhl_Libre, Heebo } from "next/font/google";
 import "./globals.css";
 
@@ -13,6 +13,18 @@ const heebo = Heebo({
   subsets: ["hebrew", "latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
+
+/**
+ * viewport-fit=cover is what makes env(safe-area-inset-*) report real
+ * values on notched iPhones — without it they are 0 and the bottom CTA
+ * sits under the home indicator.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#faf6f1",
+};
 
 export const metadata: Metadata = {
   title: {

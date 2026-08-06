@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0C0A09;
+  --background: #0c0a09;
   --foreground: #f5f5f4;
 }
 
@@ -16,11 +16,15 @@
   --color-mida-surface: #ffffff;
   --color-mida-ink: #2b2118;
   --color-mida-muted: #6f6558;
+  /* Dedicated placeholder token: muted/60 measured 2.5:1 and failed AA. */
+  --color-mida-placeholder: #8c8175;
   --color-mida-line: #e8e0d5;
   --color-mida-accent: #e11d48;
+  /* accent is 4.36:1 on the warm background — too low for small text, so
+     accent-deep (5.8:1) is the token for anything text-sized. */
   --color-mida-accent-deep: #be123c;
   --color-mida-accent-soft: #ffe4e6;
-  --color-mida-gold: #b45309;
+  --color-mida-gold: #8a4008;
 }
 
 body {
@@ -32,17 +36,51 @@ body {
 /* MIDA scope: paints its own light theme without touching the dark body
    that Studio Vain and /trading depend on. */
 .mida {
-  background: #faf6f1;
-  color: #2b2118;
+  background: var(--color-mida-bg);
+  color: var(--color-mida-ink);
   font-family: var(--font-heebo), "Heebo", system-ui, sans-serif;
 }
 
+/* Rubber-band scrolling used to reveal the near-black body behind the warm
+   MIDA page. Painting html to match, and containing overscroll, removes it. */
+html:has(.mida) {
+  background: var(--color-mida-bg);
+  overscroll-behavior-y: contain;
+}
+
+/* Own animations rather than Tailwind's, so the reduced-motion rule below
+   can keep progress indicators moving while stopping decorative motion —
+   a frozen spinner during a 20-second wait reads as a crash. */
+@keyframes mida-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mida-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+.mida-spin {
+  animation: mida-spin 1s linear infinite;
+}
+.mida-pulse {
+  animation: mida-pulse 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
+  *:not(.mida-spin):not(.mida-pulse),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .mida-spin {
+    animation-duration: 2s;
+  }
+  .mida-pulse {
+    animation: none;
+    opacity: 0.7;
   }
 }

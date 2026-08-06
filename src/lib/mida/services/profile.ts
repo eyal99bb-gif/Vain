@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { getRepos } from "../adapters/db";
 import { getStorage } from "../adapters/storage";
@@ -30,8 +31,10 @@ export async function listProfiles(uid: string): Promise<Profile[]> {
 /**
  * The profile the user is currently acting as: the one selected via the
  * mida_pid cookie (when it belongs to this uid), else the oldest profile.
+ * Memoized per request — the layout and the page both need it, and without
+ * cache() every navigation ran the lookup twice.
  */
-export async function getActiveProfile(): Promise<Profile | null> {
+export const getActiveProfile = cache(async function getActiveProfile(): Promise<Profile | null> {
   const uid = await readUid();
   if (!uid) return null;
   const repos = await getRepos();
@@ -43,7 +46,7 @@ export async function getActiveProfile(): Promise<Profile | null> {
   }
   const all = await repos.profiles.listByUid(uid);
   return all[0] ?? null;
-}
+});
 
 /** Handlers only (cookie write). Verifies the profile belongs to this uid. */
 export async function selectProfile(

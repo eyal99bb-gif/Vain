@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { compressImage } from "./imageUtils";
+import { Banner, Button, LiveStatus, Spinner } from "./ui";
+import { usePolling } from "./usePolling";
 
 type Step = "photos" | "measurements" | "avatar";
 const STEPS: Step[] = ["photos", "measurements", "avatar"];
@@ -22,36 +24,7 @@ const slide = {
 };
 
 const inputCls =
-  "h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-base text-mida-ink placeholder:text-mida-muted/60 focus:border-mida-accent focus:outline-none";
-
-const primaryBtnCls =
-  "flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-mida-accent text-lg font-semibold text-white transition-colors duration-200 hover:bg-mida-accent-deep disabled:cursor-default disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent";
-
-function Spinner() {
-  return (
-    <svg
-      className="h-5 w-5 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-        className="opacity-25"
-      />
-      <path
-        d="M22 12a10 10 0 0 0-10-10"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+  "h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-base text-mida-ink placeholder:text-mida-placeholder focus:border-mida-accent focus:outline-none";
 
 interface ExistingProfile {
   name: string;
@@ -67,9 +40,21 @@ interface ExistingProfile {
 }
 
 export default function OnboardingWizard() {
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [step, setStep] = useState<Step>("photos");
   const [error, setError] = useState<string | null>(null);
   const [existing, setExisting] = useState<ExistingProfile | null>(null);
+
+  // Focus the new step heading: AnimatePresence unmounts the focused
+  // control, which otherwise drops focus to <body> with no announcement.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    headingRef.current?.focus();
+  }, [step]);
 
   // Editing an existing profile: prefill values and allow keeping photos.
   useEffect(() => {
@@ -85,24 +70,27 @@ export default function OnboardingWizard() {
         {STEPS.map((s, i) => (
           <li
             key={s}
+            aria-current={s === step ? "step" : undefined}
             className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
               STEPS.indexOf(step) >= i ? "bg-mida-accent" : "bg-mida-line"
             }`}
-          />
+          >
+            <span className="sr-only">
+              {`שלב ${i + 1} מתוך ${STEPS.length}: ${STEP_TITLES[s]}`}
+              {s === step ? " (נוכחי)" : ""}
+            </span>
+          </li>
         ))}
       </ol>
-      <h1 className="font-display text-3xl font-bold text-mida-ink">
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="font-display text-3xl font-bold text-mida-ink outline-none"
+      >
         {STEP_TITLES[step]}
       </h1>
 
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-mida-accent-soft px-4 py-3 text-sm text-mida-accent-deep"
-        >
-          {error}
-        </p>
-      )}
+      {error && <Banner tone="error">{error}</Banner>}
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
@@ -233,11 +221,13 @@ function PhotoStep({
               type="button"
               aria-label={`הסרת תמונה ${i + 1}`}
               onClick={() => removeAt(i)}
-              className="absolute end-1 top-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-mida-ink/70 text-white"
+              className="absolute end-0 top-0 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent"
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-mida-ink/70">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </span>
             </button>
           </div>
         ))}
@@ -265,14 +255,13 @@ function PhotoStep({
       />
 
       <div className="mt-auto flex flex-col gap-2 pt-4">
-        <button
-          type="button"
-          disabled={items.length === 0 || uploading}
+        <Button
+          disabled={items.length === 0}
+          loading={uploading}
           onClick={upload}
-          className={primaryBtnCls}
         >
-          {uploading ? <Spinner /> : "המשך"}
-        </button>
+          המשך
+        </Button>
         {existingPhotoCount > 0 && items.length === 0 && (
           <button
             type="button"
@@ -381,7 +370,7 @@ function MeasurementsStep({
     <label key={f.key} className="flex flex-col gap-1.5">
       <span className="text-sm font-medium text-mida-ink">
         {f.label}
-        {f.required && <span className="text-mida-accent"> *</span>}
+        {f.required && <span className="text-mida-accent-deep"> *</span>}
       </span>
       <input
         dir="ltr"
@@ -420,12 +409,33 @@ function MeasurementsStep({
           aria-label="גזרה מועדפת"
           className="grid grid-cols-3 gap-2"
         >
-          {FIT_OPTIONS.map((o) => (
+          {FIT_OPTIONS.map((o, i) => (
             <button
               key={o.value}
               type="button"
               role="radio"
               aria-checked={fit === o.value}
+              // Radio-group contract: one stop in the tab order, arrows move.
+              tabIndex={fit === o.value ? 0 : -1}
+              onKeyDown={(e) => {
+                const dir =
+                  e.key === "ArrowLeft" || e.key === "ArrowDown"
+                    ? 1
+                    : e.key === "ArrowRight" || e.key === "ArrowUp"
+                      ? -1
+                      : 0;
+                if (!dir) return;
+                e.preventDefault();
+                const next =
+                  FIT_OPTIONS[
+                    (i + dir + FIT_OPTIONS.length) % FIT_OPTIONS.length
+                  ];
+                setFit(next.value);
+                document
+                  .querySelector<HTMLButtonElement>(`[data-fit="${next.value}"]`)
+                  ?.focus();
+              }}
+              data-fit={o.value}
               onClick={() => setFit(o.value)}
               className={`h-11 cursor-pointer rounded-xl border text-sm font-medium transition-colors duration-200 ${
                 fit === o.value
@@ -443,7 +453,7 @@ function MeasurementsStep({
         type="button"
         onClick={() => setShowOptional((v) => !v)}
         aria-expanded={showOptional}
-        className="flex cursor-pointer items-center gap-2 text-sm font-medium text-mida-accent-deep"
+        className="flex h-11 cursor-pointer items-center gap-2 self-start text-sm font-medium text-mida-accent-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent"
       >
         <svg
           viewBox="0 0 24 24"
@@ -477,14 +487,9 @@ function MeasurementsStep({
       </AnimatePresence>
 
       <div className="mt-auto pt-4">
-        <button
-          type="button"
-          disabled={!valid || saving}
-          onClick={save}
-          className={primaryBtnCls}
-        >
-          {saving ? <Spinner /> : "יצירת הדמות שלי"}
-        </button>
+        <Button disabled={!valid} loading={saving} onClick={save}>
+          שמירה והמשך
+        </Button>
       </div>
     </div>
   );
@@ -549,6 +554,7 @@ function AvatarStep({ onError }: { onError: (msg: string) => void }) {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-mida-accent-soft text-mida-accent">
             <Spinner />
           </div>
+          <LiveStatus>מכינים את הדמות שלך</LiveStatus>
           <div>
             <p className="text-lg font-semibold text-mida-ink">
               בונים את הדמות שלך…
@@ -572,16 +578,17 @@ function AvatarStep({ onError }: { onError: (msg: string) => void }) {
           <p className="text-lg font-semibold text-mida-ink">
             הדמות שלך מוכנה!
           </p>
-          <Link href="/tryon" className={primaryBtnCls}>
+          <Link
+            href="/tryon"
+            className="flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-mida-accent px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-mida-accent-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent"
+          >
             למדידה הראשונה
           </Link>
         </>
       )}
 
       {status === "failed" && (
-        <button type="button" onClick={retry} className={primaryBtnCls}>
-          ניסיון נוסף
-        </button>
+        <Button onClick={retry}>ניסיון נוסף</Button>
       )}
     </div>
   );
