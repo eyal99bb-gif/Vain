@@ -25,6 +25,10 @@ export function createPgStorage(): StorageAdapter {
       if (rows.length === 0) return null;
       return { data: Buffer.from(rows[0].data), contentType: rows[0].content_type };
     },
+    async delete(key) {
+      const sql = await getSql();
+      await sql`DELETE FROM mida_files WHERE key = ${key}`;
+    },
     url(key) {
       return `/api/files/${key}`;
     },

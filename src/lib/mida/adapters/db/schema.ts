@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   jsonb,
   pgTable,
@@ -6,6 +7,7 @@ import {
   text,
   timestamp,
   uuid,
+  customType,
 } from "drizzle-orm/pg-core";
 
 export const midaProfiles = pgTable("mida_profiles", {
@@ -61,6 +63,10 @@ export const midaTryons = pgTable("mida_tryons", {
     .references(() => midaProducts.id),
   productIds: jsonb("product_ids").notNull().default([]),
   status: text("status").notNull().default("pending"),
+  isFavorite: boolean("is_favorite").notNull().default(false),
+  processingStartedAt: timestamp("processing_started_at", {
+    withTimezone: true,
+  }),
   productImageIndex: integer("product_image_index").notNull().default(0),
   resultKey: text("result_key"),
   error: text("error"),
@@ -69,6 +75,32 @@ export const midaTryons = pgTable("mida_tryons", {
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const midaFiles = pgTable("mida_files", {
+  key: text("key").primaryKey(),
+  contentType: text("content_type").notNull(),
+  data: customType<{ data: Buffer }>({ dataType: () => "bytea" })("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const midaSizeFeedback = pgTable("mida_size_feedback", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  profileId: uuid("profile_id")
+    .notNull()
+    .references(() => midaProfiles.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => midaProducts.id, {
+    onDelete: "set null",
+  }),
+  tryonId: uuid("tryon_id"),
+  garmentType: text("garment_type").notNull().default("unknown"),
+  recommended: text("recommended").notNull(),
+  verdict: text("verdict").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

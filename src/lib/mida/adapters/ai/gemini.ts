@@ -4,7 +4,6 @@ import { midaEnv } from "../../env";
 import type { GarmentType, ScrapedProduct } from "../../types";
 import type { AiAdapter, GeneratedImage, ImageInput } from "./types";
 import {
-  avatarPrompt,
   DESCRIBE_GARMENT_PROMPT,
   EXTRACT_PRODUCT_SCHEMA,
   extractProductPrompt,
@@ -23,14 +22,26 @@ function imagePart(img: ImageInput) {
   };
 }
 
+/**
+ * Only transient conditions are worth paying for again. A safety block or a
+ * bad request fails identically every time — retrying it billed us three
+ * times for one certain failure.
+ */
+function isTransient(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /\b(429|500|502|503|504)\b|overload|unavailable|timeout|ETIMEDOUT|ECONNRESET|fetch failed/i.test(
+    message
+  );
+}
+
+const GEMINI_TIMEOUT_MS = 60_000;
+
 async function generateImage(
   prompt: string,
   images: ImageInput[]
 ): Promise<GeneratedImage> {
   let lastError: Error = new Error("Gemini returned no image");
 
-  // Image generation occasionally fails transiently (rate limits, model
-  // overload 503s) — retry with a short pause before surfacing the failure.
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, 3000 * attempt));
     try {
@@ -39,6 +50,7 @@ async function generateImage(
         contents: [
           { role: "user", parts: [{ text: prompt }, ...images.map(imagePart)] },
         ],
+        config: { abortSignal: AbortSignal.timeout(GEMINI_TIMEOUT_MS) },
       });
 
       const parts = response.candidates?.[0]?.content?.parts ?? [];
@@ -51,14 +63,16 @@ async function generateImage(
         }
       }
 
+      // A refusal is deterministic: stop immediately instead of paying again.
       const blockReason =
         response.promptFeedback?.blockReason ??
         response.candidates?.[0]?.finishReason;
-      lastError = new Error(
+      throw new Error(
         `Gemini returned no image${blockReason ? ` (${blockReason})` : ""}`
       );
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      if (!isTransient(lastError)) throw lastError;
     }
   }
   throw lastError;
@@ -148,10 +162,6 @@ function parseLooseJson(text: string): LlmProduct | null {
 
 export function createGeminiAdapter(): AiAdapter {
   return {
-    async generateAvatar(photos, measurements) {
-      return generateImage(avatarPrompt(measurements), photos);
-    },
-
     async generateTryOn(avatar, productImages, meta) {
       return generateImage(tryOnPrompt(meta), [avatar, ...productImages]);
     },

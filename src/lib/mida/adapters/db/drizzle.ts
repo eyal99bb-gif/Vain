@@ -14,7 +14,12 @@ import type {
   TryOn,
   TryOnStatus,
 } from "../../types";
-import { midaProducts, midaProfiles, midaTryons } from "./schema";
+import {
+  midaProducts,
+  midaProfiles,
+  midaSizeFeedback,
+  midaTryons,
+} from "./schema";
 import type { Repos } from "./types";
 
 async function getDb(): Promise<ReturnType<typeof drizzle>> {
@@ -74,6 +79,8 @@ function toTryOn(row: TryOnRow): TryOn {
     productId: row.productId,
     productIds: (row.productIds as string[]) ?? [row.productId],
     status: row.status as TryOnStatus,
+    isFavorite: row.isFavorite,
+    processingStartedAt: row.processingStartedAt?.toISOString() ?? null,
     productImageIndex: row.productImageIndex,
     resultKey: row.resultKey,
     error: row.error,
@@ -121,6 +128,11 @@ export function createDrizzleRepos(): Repos {
           .where(eq(midaProfiles.id, id))
           .returning();
         return rows[0] ? toProfile(rows[0]) : null;
+      },
+      async deleteById(id) {
+        const db = await dbPromise();
+        // Try-ons and feedback cascade (see ENSURE_SCHEMA_SQL).
+        await db.delete(midaProfiles).where(eq(midaProfiles.id, id));
       },
     },
     products: {
@@ -179,17 +191,78 @@ export function createDrizzleRepos(): Repos {
       },
       async create(tryon) {
         const db = await dbPromise();
-        const rows = await db.insert(midaTryons).values(tryon).returning();
+        const { processingStartedAt, ...rest } = tryon;
+        const rows = await db
+          .insert(midaTryons)
+          .values({
+            ...rest,
+            processingStartedAt: processingStartedAt
+              ? new Date(processingStartedAt)
+              : null,
+          })
+          .returning();
         return toTryOn(rows[0]);
       },
       async update(id, patch) {
         const db = await dbPromise();
+        const { processingStartedAt, ...rest } = patch;
         const rows = await db
           .update(midaTryons)
-          .set({ ...patch, updatedAt: new Date() })
+          .set({
+            ...rest,
+            ...(processingStartedAt !== undefined
+              ? {
+                  processingStartedAt: processingStartedAt
+                    ? new Date(processingStartedAt)
+                    : null,
+                }
+              : {}),
+            updatedAt: new Date(),
+          })
           .where(eq(midaTryons.id, id))
           .returning();
         return rows[0] ? toTryOn(rows[0]) : null;
+      },
+      async deleteById(id) {
+        const db = await dbPromise();
+        await db.delete(midaTryons).where(eq(midaTryons.id, id));
+      },
+    },
+    feedback: {
+      async listByProfile(profileId) {
+        const db = await dbPromise();
+        const rows = await db
+          .select()
+          .from(midaSizeFeedback)
+          .where(eq(midaSizeFeedback.profileId, profileId))
+          .orderBy(desc(midaSizeFeedback.createdAt));
+        return rows.map((row) => ({
+          id: row.id,
+          profileId: row.profileId,
+          productId: row.productId,
+          tryonId: row.tryonId,
+          garmentType: row.garmentType,
+          recommended: row.recommended,
+          verdict: row.verdict as "fit" | "small" | "large",
+          createdAt: row.createdAt.toISOString(),
+        }));
+      },
+      async create(feedback) {
+        const db = await dbPromise();
+        const rows = await db
+          .insert(midaSizeFeedback)
+          .values(feedback)
+          .returning();
+        return {
+          id: rows[0].id,
+          profileId: rows[0].profileId,
+          productId: rows[0].productId,
+          tryonId: rows[0].tryonId,
+          garmentType: rows[0].garmentType,
+          recommended: rows[0].recommended,
+          verdict: rows[0].verdict as "fit" | "small" | "large",
+          createdAt: rows[0].createdAt.toISOString(),
+        };
       },
     },
   };

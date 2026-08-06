@@ -1,4 +1,4 @@
-import type { Measurements, NormalizedSizeChart, ScrapedProduct } from "../../types";
+import type { NormalizedSizeChart, ScrapedProduct } from "../../types";
 
 export interface ImageInput {
   data: Buffer;
@@ -38,11 +38,6 @@ export interface GarmentDescription {
 }
 
 export interface AiAdapter {
-  /** Build the canonical normalized avatar from the user's photos. */
-  generateAvatar(
-    photos: ImageInput[],
-    measurements: Measurements
-  ): Promise<GeneratedImage>;
   /** Dress the person photo with the product image(s), in order. */
   generateTryOn(
     avatar: ImageInput,

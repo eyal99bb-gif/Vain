@@ -3,6 +3,7 @@ import { getAi } from "../adapters/ai";
 import { getRepos } from "../adapters/db";
 import { getStorage } from "../adapters/storage";
 import { huntSizeChart, scrapeProduct } from "../scraper";
+import { assertPublicUrl } from "../net";
 import type { GarmentType, Product } from "../types";
 
 function normalizeUrl(raw: string): string {
@@ -23,6 +24,9 @@ function isFixture(product: Product): boolean {
 }
 
 export async function ingestProduct(rawUrl: string): Promise<Product> {
+  // Reject internal/private targets before any work: this URL is fully
+  // user-controlled and the server would otherwise proxy into the network.
+  await assertPublicUrl(rawUrl);
   const url = normalizeUrl(rawUrl);
   const urlHash = createHash("sha256").update(url).digest("hex");
 

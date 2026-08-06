@@ -1,5 +1,6 @@
 // S3-compatible storage (Cloudflare R2 etc.), active when S3_* env vars are set.
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -44,6 +45,11 @@ export function createS3Storage(): StorageAdapter {
       } catch {
         return null;
       }
+    },
+    async delete(key) {
+      await client
+        .send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
+        .catch(() => {});
     },
     url(key) {
       if (midaEnv.S3_PUBLIC_URL) {

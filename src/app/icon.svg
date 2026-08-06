@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#2b2118"/>
+  <!-- Measuring-tape mark: two ticks and a body line — "measure, don't guess". -->
+  <path d="M16 18v28M48 18v28" stroke="#e11d48" stroke-width="5" stroke-linecap="round"/>
+  <path d="M32 14v36" stroke="#faf6f1" stroke-width="5" stroke-linecap="round"/>
+  <path d="M16 32h32" stroke="#faf6f1" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+</svg>

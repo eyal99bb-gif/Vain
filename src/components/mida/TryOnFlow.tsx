@@ -5,6 +5,10 @@ import { AnimatePresence, motion } from "motion/react";
 import type { Product, SizeRecommendation, TryOnStatus } from "@/lib/mida/types";
 import SizeRecCard from "./SizeRecCard";
 import { compressImage } from "./imageUtils";
+import { Banner, Button, Card, LiveStatus, Spinner } from "./ui";
+import { usePolling } from "./usePolling";
+import ShareButton from "./ShareButton";
+import FitFeedback from "./FitFeedback";
 
 type Phase =
   | { name: "idle" }
@@ -13,6 +17,7 @@ type Phase =
   | { name: "processing"; product: Product; tryonId: string }
   | {
       name: "ready";
+      tryonId: string;
       resultUrl: string | null;
       sizeRec: SizeRecommendation | null;
     }
@@ -25,28 +30,30 @@ const PROGRESS_LINES = [
   "עוד רגע קטן…",
 ];
 
-const POLL_MS = 2000;
-const TIMEOUT_MS = 90_000;
-
-const primaryBtnCls =
-  "flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-mida-accent text-lg font-semibold text-white transition-colors duration-200 hover:bg-mida-accent-deep disabled:cursor-default disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent";
-
 const secondaryBtnCls =
-  "flex h-12 w-full cursor-pointer items-center justify-center rounded-full border border-mida-line bg-mida-surface text-base font-medium text-mida-ink transition-colors duration-200 hover:border-mida-accent";
+  "flex h-12 w-full cursor-pointer items-center justify-center rounded-full border border-mida-line bg-mida-surface text-base font-medium text-mida-ink transition-colors duration-200 hover:border-mida-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent";
 
-function Spinner() {
-  return (
-    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-      <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
+/** Distinct copy per failure: a typo, an exhausted quota and an outage are
+ *  three different problems and used to share one sentence. */
+function describeApiError(status: number, data: unknown): string {
+  const body = (data ?? {}) as { error?: string; message?: string };
+  if (status === 429) {
+    return body.message ?? "הגעת למכסה היומית — נסו שוב מחר.";
+  }
+  if (body.error === "blocked_url") return "הכתובת הזו אינה נתמכת.";
+  if (body.error === "invalid_url") return "הקישור לא תקין — בדקו והדביקו שוב.";
+  if (body.error === "no_profile") return "צריך קודם לבנות פרופיל.";
+  if (status >= 500) return "תקלה זמנית אצלנו — נסו שוב בעוד רגע.";
+  return "לא הצלחנו לקרוא את העמוד — נסו קישור אחר או העלו צילום מסך.";
 }
 
 export default function TryOnFlow() {
   const [phase, setPhase] = useState<Phase>({ name: "idle" });
   const [url, setUrl] = useState("");
   const [demoMode, setDemoMode] = useState(false);
+  const [quota, setQuota] = useState<{ used: number; limit: number } | null>(
+    null
+  );
   // The look built so far: items already dressed + the try-on whose result
   // the next item will be layered onto.
   const [wornItems, setWornItems] = useState<Product[]>([]);
@@ -60,6 +67,10 @@ export default function TryOnFlow() {
       .then((res) => res.json())
       .then((data) => setDemoMode(data.aiMode === "demo"))
       .catch(() => {});
+    fetch("/api/mida/tryons")
+      .then((res) => res.json())
+      .then((data) => data.quota && setQuota(data.quota))
+      .catch(() => {});
   }, []);
 
   const ingest = async () => {
@@ -70,15 +81,24 @@ export default function TryOnFlow() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setPhase({
+          name: "failed",
+          product: null,
+          message: describeApiError(res.status, data),
+        });
+        return;
+      }
       setUrl("");
       setPhase({ name: "itemReady", product: data.product });
     } catch {
       setPhase({
         name: "failed",
         product: null,
-        message: "לא הצלחנו לקרוא את העמוד — בדקו את הקישור, או העלו צילום מסך של המוצר.",
+        message: navigator.onLine
+          ? "לא הצלחנו לקרוא את העמוד — בדקו את הקישור, או העלו צילום מסך של המוצר."
+          : "אין חיבור לאינטרנט — התחברו ונסו שוב.",
       });
     }
   };
@@ -113,8 +133,16 @@ export default function TryOnFlow() {
           ...(lastTryOnId ? { baseTryOnId: lastTryOnId } : {}),
         }),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setPhase({
+          name: "failed",
+          product,
+          message: describeApiError(res.status, data),
+        });
+        return;
+      }
+      if (data.quota) setQuota(data.quota);
       setPhase({ name: "processing", product, tryonId: data.tryon.id });
     } catch {
       setPhase({ name: "failed", product, message: "המדידה לא יצאה לדרך — נסו שוב." });
@@ -124,13 +152,14 @@ export default function TryOnFlow() {
   return (
     <div className="flex flex-1 flex-col gap-5 py-4">
       {demoMode && (
-        <p
-          role="alert"
-          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
-        >
-          השרת רץ ללא מפתח Gemini — התוצאות שתראו הן הדגמה בלבד. יש להגדיר את
-          GEMINI_API_KEY בהגדרות השרת ולפרוס מחדש.
-        </p>
+        <Banner tone="warn">
+          מצב הדגמה — התוצאות אינן הדמיה אמיתית של הבגד.
+        </Banner>
+      )}
+      {quota && quota.limit - quota.used <= 3 && (
+        <Banner tone="info">
+          נשארו לך {Math.max(0, quota.limit - quota.used)} מדידות היום.
+        </Banner>
       )}
       <input
         ref={screenshotRef}
@@ -182,7 +211,12 @@ export default function TryOnFlow() {
                     : [...prev, phase.product]
                 );
                 setLastTryOnId(phase.tryonId);
-                setPhase({ name: "ready", resultUrl, sizeRec });
+                setPhase({
+                  name: "ready",
+                  tryonId: phase.tryonId,
+                  resultUrl,
+                  sizeRec,
+                });
               }}
               onFailed={(message) =>
                 setPhase({ name: "failed", product: phase.product, message })
@@ -192,6 +226,7 @@ export default function TryOnFlow() {
 
           {phase.name === "ready" && (
             <ResultView
+              tryonId={phase.tryonId}
               wornItems={wornItems}
               resultUrl={phase.resultUrl}
               sizeRec={phase.sizeRec}
@@ -211,21 +246,9 @@ export default function TryOnFlow() {
                 {phase.message}
               </p>
               {phase.product ? (
-                <button
-                  type="button"
-                  onClick={() => startTryOn(phase.product!)}
-                  className={primaryBtnCls}
-                >
-                  ניסיון נוסף
-                </button>
+                <Button onClick={() => startTryOn(phase.product!)}>ניסיון נוסף</Button>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => screenshotRef.current?.click()}
-                  className={primaryBtnCls}
-                >
-                  העלאת צילום מסך של המוצר
-                </button>
+                <Button onClick={() => screenshotRef.current?.click()}>העלאת צילום מסך של המוצר</Button>
               )}
               <button
                 type="button"
@@ -288,19 +311,12 @@ function IdleView({
           value={url}
           onChange={(e) => onUrlChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && valid && onSubmit()}
-          className="h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-start text-base text-mida-ink placeholder:text-mida-muted/60 focus:border-mida-accent focus:outline-none"
+          className="h-12 w-full rounded-xl border border-mida-line bg-mida-surface px-4 text-start text-base text-mida-ink placeholder:text-mida-placeholder focus:border-mida-accent focus:outline-none"
         />
       </label>
 
       <div className="mt-auto flex flex-col gap-2 pt-4">
-        <button
-          type="button"
-          disabled={!valid}
-          onClick={onSubmit}
-          className={primaryBtnCls}
-        >
-          בדיקת המוצר
-        </button>
+        <Button disabled={!valid} onClick={onSubmit}>בדיקת המוצר</Button>
         <button type="button" onClick={onScreenshot} className={secondaryBtnCls}>
           העלאת צילום מסך במקום
         </button>
@@ -330,6 +346,13 @@ function ItemCard({
             <img
               src={product.images[imageIndex]}
               alt={product.title}
+              loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                // Many store CDNs block hotlinking; show the card, not a
+                // broken-image glyph.
+                e.currentTarget.style.display = "none";
+              }}
               className="h-full w-full object-contain"
             />
           </div>
@@ -388,14 +411,7 @@ function ItemCard({
       </div>
 
       <div className="mt-auto flex flex-col gap-2 pt-4">
-        <button
-          type="button"
-          disabled={product.images.length === 0}
-          onClick={onTryOn}
-          className={primaryBtnCls}
-        >
-          {isAddition ? "הוספה ללוק" : "מדוד עליי"}
-        </button>
+        <Button disabled={product.images.length === 0} onClick={onTryOn}>{isAddition ? "הוספה ללוק" : "מדוד עליי"}</Button>
         <button type="button" onClick={onCancel} className={secondaryBtnCls}>
           ביטול
         </button>
@@ -410,7 +426,9 @@ function CenteredStatus({ text }: { text: string }) {
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-mida-accent-soft text-mida-accent">
         <Spinner />
       </div>
-      <p className="text-lg font-medium text-mida-ink">{text}</p>
+      <p className="text-lg font-medium text-mida-ink" role="status" aria-live="polite">
+        {text}
+      </p>
     </div>
   );
 }
@@ -425,7 +443,6 @@ function ProcessingView({
   onFailed: (message: string) => void;
 }) {
   const [lineIndex, setLineIndex] = useState(0);
-  const startedAt = useRef<number | null>(null);
 
   useEffect(() => {
     const id = setInterval(
@@ -435,53 +452,45 @@ function ProcessingView({
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    startedAt.current ??= Date.now();
-
-    const poll = async () => {
-      if (cancelled) return;
-      try {
-        const res = await fetch(`/api/mida/tryons/${tryonId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const status: TryOnStatus = data.tryon.status;
-          if (status === "ready") {
-            onReady(data.tryon.resultUrl, data.tryon.sizeRec);
-            return;
-          }
-          if (status === "failed") {
-            const detail: string | null = data.tryon.error;
-            onFailed(
-              detail && /[֐-׿]/.test(detail)
-                ? detail // server already produced a Hebrew message
-                : `ההדמיה נכשלה הפעם — נסו שוב.${detail ? ` (${detail})` : ""}`
-            );
-            return;
-          }
-        }
-      } catch {
-        // transient error — keep polling
+  usePolling<{ resultUrl: string | null; sizeRec: SizeRecommendation | null }>({
+    url: `/api/mida/tryons/${tryonId}`,
+    decide: (data) => {
+      const tryon = (data as { tryon?: Record<string, unknown> }).tryon;
+      const status = tryon?.status as TryOnStatus | undefined;
+      if (status === "ready") {
+        return {
+          done: true,
+          value: {
+            resultUrl: (tryon?.resultUrl as string | null) ?? null,
+            sizeRec: (tryon?.sizeRec as SizeRecommendation | null) ?? null,
+          },
+        };
       }
-      if (Date.now() - (startedAt.current ?? 0) > TIMEOUT_MS) {
-        onFailed("זה לוקח יותר מדי זמן — נסו שוב בעוד רגע.");
-        return;
+      if (status === "failed") {
+        const detail = (tryon?.error as string | null) ?? null;
+        return {
+          done: true,
+          // Hebrew messages come from us and are safe to show verbatim.
+          error:
+            detail && /[֐-׿]/.test(detail)
+              ? detail
+              : "ההדמיה נכשלה הפעם — נסו שוב.",
+        };
       }
-      setTimeout(poll, POLL_MS);
-    };
-
-    poll();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tryonId]);
+      return { done: false };
+    },
+    onDone: ({ resultUrl, sizeRec }) => onReady(resultUrl, sizeRec),
+    onError: onFailed,
+  });
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-mida-accent-soft text-mida-accent">
         <Spinner />
       </div>
+      {/* One stable announcement — the rotating lines would spam a screen
+          reader every few seconds. */}
+      <LiveStatus>מכינים את ההדמיה שלך, זה ייקח כ-20 שניות</LiveStatus>
       <AnimatePresence mode="wait">
         <motion.p
           key={lineIndex}
@@ -489,6 +498,7 @@ function ProcessingView({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
+          aria-hidden="true"
           className="text-lg font-medium text-mida-ink"
         >
           {PROGRESS_LINES[lineIndex]}
@@ -500,12 +510,14 @@ function ProcessingView({
 }
 
 function ResultView({
+  tryonId,
   wornItems,
   resultUrl,
   sizeRec,
   onAddItem,
   onReset,
 }: {
+  tryonId: string;
   wornItems: Product[];
   resultUrl: string | null;
   sizeRec: SizeRecommendation | null;
@@ -528,7 +540,7 @@ function ResultView({
           <img
             src={resultUrl}
             alt={`הלוק עליך: ${wornItems.map((p) => p.title).join(", ")}`}
-            className="w-full"
+            className="aspect-square w-full object-cover"
           />
         </motion.div>
       )}
@@ -540,24 +552,23 @@ function ResultView({
       )}
 
       {sizeRec ? (
-        <SizeRecCard rec={sizeRec} />
+        <>
+          <SizeRecCard rec={sizeRec} />
+          <FitFeedback tryonId={tryonId} size={sizeRec.size} />
+        </>
       ) : (
-        <p className="rounded-2xl border border-mida-line bg-mida-surface p-4 text-sm leading-relaxed text-mida-muted">
-          לפריט הזה לא נמצאה טבלת מידות, ולכן אין המלצת מידה.
-        </p>
+        <Card>
+          <p className="text-sm leading-relaxed text-mida-muted">
+            לפריט הזה לא נמצאה טבלת מידות, ולכן אין המלצת מידה.
+          </p>
+        </Card>
       )}
 
       <div className="mt-auto flex flex-col gap-2 pt-2">
         {canAddMore && (
-          <button type="button" onClick={onAddItem} className={primaryBtnCls}>
-            הוספת פריט נוסף ללוק
-          </button>
+          <Button onClick={onAddItem}>הוספת פריט נוסף ללוק</Button>
         )}
-        {resultUrl && (
-          <a href={resultUrl} download="mida-look.png" className={secondaryBtnCls}>
-            שמירת הלוק
-          </a>
-        )}
+        {resultUrl && <ShareButton resultUrl={resultUrl} label="שמירה ושיתוף" />}
         {buyable.map((p) => (
           <a
             key={p.id}

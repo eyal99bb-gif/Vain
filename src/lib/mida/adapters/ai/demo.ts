@@ -2,6 +2,7 @@
 // so the async job flow and progress UI behave like the real thing.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import type { ScrapedProduct } from "../../types";
 import type { AiAdapter, GeneratedImage } from "./types";
 
@@ -13,8 +14,11 @@ const FIXTURES_DIR = path.join(
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function fixture(name: string): Promise<GeneratedImage> {
-  const data = await readFile(path.join(FIXTURES_DIR, name));
-  return { data, mimeType: "image/svg+xml" };
+  // Rendered to PNG: SVG is never served from our own origin (it can carry
+  // script), so the demo path produces the same format as the real one.
+  const svg = await readFile(path.join(FIXTURES_DIR, name));
+  const data = await sharp(svg).png().toBuffer();
+  return { data, mimeType: "image/png" };
 }
 
 export const DEMO_PRODUCT: ScrapedProduct = {
@@ -39,10 +43,6 @@ export const DEMO_PRODUCT: ScrapedProduct = {
 
 export function createDemoAdapter(): AiAdapter {
   return {
-    async generateAvatar() {
-      await sleep(2500);
-      return fixture("avatar.svg");
-    },
     async generateTryOn() {
       await sleep(3500);
       return fixture("tryon.svg");

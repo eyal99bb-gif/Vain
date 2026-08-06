@@ -5,12 +5,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { midaEnv } from "../../env";
 import type { Product, Profile, TryOn } from "../../types";
+import type { SizeFeedback } from "./types";
 import type { Repos } from "./types";
 
 interface FileStore {
   profiles: Profile[];
   products: Product[];
   tryons: TryOn[];
+  feedback: SizeFeedback[];
 }
 
 // Stashed on globalThis so the store survives Turbopack HMR module
@@ -29,7 +31,7 @@ function loadStore(): FileStore {
   const g = globalThis as GlobalWithStore;
   if (g[GLOBAL_KEY]) return g[GLOBAL_KEY];
 
-  let store: FileStore = { profiles: [], products: [], tryons: [] };
+  let store: FileStore = { profiles: [], products: [], tryons: [], feedback: [] };
   const file = storePath();
   if (existsSync(file)) {
     try {
@@ -97,6 +99,13 @@ export function createFileRepos(): Repos {
         persist(store);
         return profile;
       },
+      async deleteById(id) {
+        const store = loadStore();
+        store.profiles = store.profiles.filter((p) => p.id !== id);
+        store.tryons = store.tryons.filter((t) => t.profileId !== id);
+        store.feedback = store.feedback.filter((f) => f.profileId !== id);
+        persist(store);
+      },
     },
     products: {
       async getByUrlHash(urlHash) {
@@ -154,6 +163,29 @@ export function createFileRepos(): Repos {
         Object.assign(tryon, patch, { updatedAt: now() });
         persist(store);
         return tryon;
+      },
+      async deleteById(id) {
+        const store = loadStore();
+        store.tryons = store.tryons.filter((t) => t.id !== id);
+        persist(store);
+      },
+    },
+    feedback: {
+      async listByProfile(profileId) {
+        return loadStore()
+          .feedback.filter((f) => f.profileId === profileId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      },
+      async create(feedback) {
+        const store = loadStore();
+        const created: SizeFeedback = {
+          ...feedback,
+          id: crypto.randomUUID(),
+          createdAt: now(),
+        };
+        store.feedback.push(created);
+        persist(store);
+        return created;
       },
     },
   };
