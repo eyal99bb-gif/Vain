@@ -11,7 +11,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 concurrency:
@@ -35,12 +35,33 @@ jobs:
 
       - run: npm ci
 
+      - name: Load previous portfolio state (for the equity curve)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/contents/bot-state.json?ref=gh-pages" \
+            --jq '.content' 2>/dev/null | base64 -d > prev-state.json || echo '{}' > prev-state.json
+
       - name: Trade on the Alpaca PAPER account (fake money only)
         env:
           ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
           ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
           TEST_TRADE: ${{ inputs.test_trade }}
         run: npx tsx scripts/paper-trader.mts
+
+      - name: Publish live portfolio state to the site (gh-pages)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f bot-state.json ] || exit 0
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/contents/bot-state.json?ref=gh-pages" --jq '.sha' 2>/dev/null || echo "")
+          content=$(base64 -w0 bot-state.json)
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/bot-state.json" \
+            -f message="chore: update live bot state [skip ci]" \
+            -f content="$content" \
+            -f branch="gh-pages" \
+            ${sha:+-f sha="$sha"}
 
       - name: Update the heartbeat status issue (no notifications)
         if: always()
