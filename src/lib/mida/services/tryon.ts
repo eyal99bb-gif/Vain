@@ -5,7 +5,7 @@ import { getStorage } from "../adapters/storage";
 import type { StorageAdapter } from "../adapters/storage";
 import { normalizeImage } from "../images";
 import { BROWSER_HEADERS, safeFetch } from "../net";
-import { logError } from "../log";
+import { logError, logWarn } from "../log";
 import { runJob } from "../jobs";
 import { recommendSize } from "../sizing/recommend";
 import type { Product, Profile, TryOn } from "../types";
@@ -23,6 +23,30 @@ export interface TryOnView {
   resultUrl: string | null;
   sizeRec: TryOn["sizeRec"];
   error: string | null;
+}
+
+/** A job killed mid-flight (platform timeout) never runs its own catch. */
+const STUCK_AFTER_MS = 3 * 60 * 1000;
+
+/**
+ * Mark abandoned jobs failed on read. Serverless functions can be killed
+ * while `after()` work is still running, which would otherwise leave the row
+ * spinning in `processing` forever.
+ */
+export async function reapIfStuck(tryon: TryOn): Promise<TryOn> {
+  if (tryon.status !== "processing") return tryon;
+  const startedAt = Date.parse(tryon.processingStartedAt ?? tryon.updatedAt);
+  if (Number.isNaN(startedAt) || Date.now() - startedAt < STUCK_AFTER_MS) {
+    return tryon;
+  }
+  const repos = await getRepos();
+  logWarn("tryon.stuck", { tryonId: tryon.id });
+  return (
+    (await repos.tryons.update(tryon.id, {
+      status: "failed",
+      error: "ההדמיה נקטעה באמצע — נסו שוב.",
+    })) ?? tryon
+  );
 }
 
 export async function toTryOnView(tryon: TryOn): Promise<TryOnView> {
@@ -151,6 +175,8 @@ export async function startTryOn(
     productIds: products.map((p) => p.id),
     status: "pending",
     productImageIndex,
+    isFavorite: false,
+    processingStartedAt: null,
     resultKey: null,
     error: null,
     sizeRec,
@@ -158,7 +184,10 @@ export async function startTryOn(
 
   runJob(`tryon:${tryon.id}`, async () => {
     try {
-      await repos.tryons.update(tryon.id, { status: "processing" });
+      await repos.tryons.update(tryon.id, {
+        status: "processing",
+        processingStartedAt: new Date().toISOString(),
+      });
       const storage = await getStorage();
       const ai = await getAi();
 

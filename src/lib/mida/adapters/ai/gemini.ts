@@ -4,7 +4,6 @@ import { midaEnv } from "../../env";
 import type { GarmentType, ScrapedProduct } from "../../types";
 import type { AiAdapter, GeneratedImage, ImageInput } from "./types";
 import {
-  avatarPrompt,
   DESCRIBE_GARMENT_PROMPT,
   EXTRACT_PRODUCT_SCHEMA,
   extractProductPrompt,
@@ -163,10 +162,6 @@ function parseLooseJson(text: string): LlmProduct | null {
 
 export function createGeminiAdapter(): AiAdapter {
   return {
-    async generateAvatar(photos, measurements) {
-      return generateImage(avatarPrompt(measurements), photos);
-    },
-
     async generateTryOn(avatar, productImages, meta) {
       return generateImage(tryOnPrompt(meta), [avatar, ...productImages]);
     },

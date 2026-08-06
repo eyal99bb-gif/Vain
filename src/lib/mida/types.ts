@@ -131,6 +131,9 @@ export interface TryOn {
   /** All products dressed in this try-on, in order (1-3 items). */
   productIds: string[];
   status: TryOnStatus;
+  isFavorite: boolean;
+  /** When the job started, so stuck rows can be reaped. */
+  processingStartedAt: string | null;
   productImageIndex: number;
   resultKey: string | null;
   error: string | null;

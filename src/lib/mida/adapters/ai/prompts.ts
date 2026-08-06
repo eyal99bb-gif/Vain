@@ -1,23 +1,5 @@
 // All Gemini prompts live here so try-on quality can be iterated in one place.
-import type { Measurements } from "../../types";
 import type { TryOnMeta } from "./types";
-
-export function avatarPrompt(m: Measurements): string {
-  return [
-    "Create a single clean full-body studio photo of the person from the reference photo(s).",
-    "Keep the person's face, hair, skin tone, body shape and proportions exactly as in the reference.",
-    `Body data for accurate proportions: height ${m.heightCm} cm, weight ${m.weightKg} kg` +
-      (m.chestCm ? `, chest ${m.chestCm} cm` : "") +
-      (m.waistCm ? `, waist ${m.waistCm} cm` : "") +
-      (m.hipsCm ? `, hips ${m.hipsCm} cm` : "") +
-      ".",
-    "Pose: standing straight, facing the camera, arms relaxed at the sides, neutral expression.",
-    "Clothing: plain fitted neutral-gray t-shirt and plain fitted neutral-gray pants.",
-    "Background: seamless light-gray studio background, soft even lighting, no shadows on the wall.",
-    "Framing: full body visible head to shoes, centered, vertical orientation.",
-    "Do not add text, watermarks, props, or other people.",
-  ].join(" ");
-}
 
 const MEASURE_LABELS: Record<string, string> = {
   chest: "chest",

@@ -62,7 +62,31 @@ CREATE TABLE IF NOT EXISTS mida_files (
   data bytea NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS mida_size_feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id uuid NOT NULL REFERENCES mida_profiles(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES mida_products(id) ON DELETE SET NULL,
+  tryon_id uuid,
+  garment_type text NOT NULL DEFAULT 'unknown',
+  recommended text NOT NULL,
+  verdict text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 ALTER TABLE mida_tryons ADD COLUMN IF NOT EXISTS product_ids jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE mida_tryons ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false;
+ALTER TABLE mida_tryons ADD COLUMN IF NOT EXISTS processing_started_at timestamptz;
+CREATE INDEX IF NOT EXISTS mida_tryons_profile_created_idx
+  ON mida_tryons (profile_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS mida_size_feedback_profile_idx
+  ON mida_size_feedback (profile_id);
+-- Deleting a profile must take its try-ons with it: the constraint created
+-- alongside the table defaults to RESTRICT. Drop every name it may carry
+-- (Drizzle's, Postgres's implicit one, and ours) so this stays idempotent.
+ALTER TABLE mida_tryons DROP CONSTRAINT IF EXISTS mida_tryons_profile_id_mida_profiles_id_fk;
+ALTER TABLE mida_tryons DROP CONSTRAINT IF EXISTS mida_tryons_profile_id_fkey;
+ALTER TABLE mida_tryons DROP CONSTRAINT IF EXISTS mida_tryons_profile_cascade_fk;
+ALTER TABLE mida_tryons ADD CONSTRAINT mida_tryons_profile_cascade_fk
+  FOREIGN KEY (profile_id) REFERENCES mida_profiles(id) ON DELETE CASCADE;
 ALTER TABLE mida_profiles ADD COLUMN IF NOT EXISTS name text NOT NULL DEFAULT 'הפרופיל שלי';
 ALTER TABLE mida_profiles DROP CONSTRAINT IF EXISTS mida_profiles_uid_key;
 CREATE INDEX IF NOT EXISTS mida_profiles_uid_idx ON mida_profiles (uid);
@@ -78,7 +102,16 @@ type GlobalWithPg = typeof globalThis & {
 function init(): { sql: Sql; ready: Promise<void> } {
   const g = globalThis as GlobalWithPg;
   if (!g[GLOBAL_KEY]) {
-    const sql = postgres(midaEnv.DATABASE_URL!, { max: 5 });
+    // Serverless: one connection per instance. Five per instance multiplied
+    // by concurrent lambdas exhausts Neon's connection limit under load.
+    // prepare:false is required behind pgbouncer transaction pooling.
+    const sql = postgres(midaEnv.DATABASE_URL!, {
+      max: 1,
+      idle_timeout: 20,
+      max_lifetime: 60 * 30,
+      connect_timeout: 10,
+      prepare: false,
+    });
     g[GLOBAL_KEY] = { sql, ready: sql.unsafe(ENSURE_SCHEMA_SQL).then(() => {}) };
   }
   return g[GLOBAL_KEY];

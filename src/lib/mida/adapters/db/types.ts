@@ -4,11 +4,28 @@ export type ProfilePatch = Partial<
   Omit<Profile, "id" | "uid" | "createdAt" | "updatedAt">
 >;
 
+export interface SizeFeedback {
+  id: string;
+  profileId: string;
+  productId: string | null;
+  tryonId: string | null;
+  garmentType: string;
+  recommended: string;
+  verdict: "fit" | "small" | "large";
+  createdAt: string;
+}
+
+export interface FeedbackRepo {
+  listByProfile(profileId: string): Promise<SizeFeedback[]>;
+  create(feedback: Omit<SizeFeedback, "id" | "createdAt">): Promise<SizeFeedback>;
+}
+
 export interface ProfileRepo {
   listByUid(uid: string): Promise<Profile[]>;
   getById(id: string): Promise<Profile | null>;
   create(uid: string, patch: ProfilePatch): Promise<Profile>;
   updateById(id: string, patch: ProfilePatch): Promise<Profile | null>;
+  deleteById(id: string): Promise<void>;
 }
 
 export interface ProductRepo {
@@ -31,10 +48,12 @@ export interface TryOnRepo {
     id: string,
     patch: Partial<Omit<TryOn, "id" | "createdAt" | "updatedAt">>
   ): Promise<TryOn | null>;
+  deleteById(id: string): Promise<void>;
 }
 
 export interface Repos {
   profiles: ProfileRepo;
   products: ProductRepo;
   tryons: TryOnRepo;
+  feedback: FeedbackRepo;
 }

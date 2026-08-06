@@ -1,6 +1,6 @@
 import { getRepos } from "@/lib/mida/adapters/db";
 import { readUid } from "@/lib/mida/uid";
-import { toTryOnView } from "@/lib/mida/services/tryon";
+import { reapIfStuck, toTryOnView } from "@/lib/mida/services/tryon";
 
 export async function GET(
   _request: Request,
@@ -20,5 +20,6 @@ export async function GET(
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
-  return Response.json({ tryon: await toTryOnView(tryon) });
+  // Abandoned jobs are marked failed here rather than spinning forever.
+  return Response.json({ tryon: await toTryOnView(await reapIfStuck(tryon)) });
 }

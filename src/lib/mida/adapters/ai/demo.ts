@@ -43,10 +43,6 @@ export const DEMO_PRODUCT: ScrapedProduct = {
 
 export function createDemoAdapter(): AiAdapter {
   return {
-    async generateAvatar() {
-      await sleep(2500);
-      return fixture("avatar.svg");
-    },
     async generateTryOn() {
       await sleep(3500);
       return fixture("tryon.svg");

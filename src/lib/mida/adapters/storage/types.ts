@@ -6,6 +6,8 @@ export interface StorageAdapter {
    */
   put(key: string, data: Buffer, contentType: string): Promise<string>;
   get(key: string): Promise<{ data: Buffer; contentType: string } | null>;
+  /** Remove an object. Missing keys are not an error. */
+  delete(key: string): Promise<void>;
   /** Public URL the browser can load the object from. */
   url(key: string): string;
 }

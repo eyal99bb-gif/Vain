@@ -1,5 +1,5 @@
 // Local-disk storage for demo/dev. Objects are served via /api/files/[...key].
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { midaEnv } from "../../env";
 import type { StorageAdapter } from "./types";
@@ -44,6 +44,9 @@ export function createLocalStorage(): StorageAdapter {
       } catch {
         return null;
       }
+    },
+    async delete(key) {
+      await rm(safePath(key), { force: true });
     },
     url(key) {
       return `/api/files/${key}`;
