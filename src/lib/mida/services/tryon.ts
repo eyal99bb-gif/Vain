@@ -3,6 +3,9 @@ import type { GarmentRef, ImageInput } from "../adapters/ai";
 import { getRepos } from "../adapters/db";
 import { getStorage } from "../adapters/storage";
 import type { StorageAdapter } from "../adapters/storage";
+import { normalizeImage } from "../images";
+import { BROWSER_HEADERS, safeFetch } from "../net";
+import { logError } from "../log";
 import { runJob } from "../jobs";
 import { recommendSize } from "../sizing/recommend";
 import type { Product, Profile, TryOn } from "../types";
@@ -12,12 +15,6 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
   "image/svg+xml": ".svg",
-};
-
-const BROWSER_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-  Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
 };
 
 export interface TryOnView {
@@ -64,13 +61,19 @@ async function fetchProductImage(
       continue;
     }
     try {
-      const res = await fetch(imageUrl, {
-        signal: AbortSignal.timeout(10_000),
-        headers: { ...BROWSER_HEADERS, Referer: product.url || imageUrl },
+      // safeFetch blocks private addresses: these URLs come from scraped
+      // pages and from the model, so they are not trusted input.
+      const res = await safeFetch(imageUrl, {
+        timeoutMs: 10_000,
+        maxBytes: 8 * 1024 * 1024,
+        headers: {
+          ...BROWSER_HEADERS,
+          Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
+          Referer: product.url || imageUrl,
+        },
       });
-      const type = res.headers.get("content-type") ?? "";
-      if (res.ok && type.startsWith("image/") && !type.includes("svg")) {
-        return { data: Buffer.from(await res.arrayBuffer()), mimeType: type };
+      if (res.ok && res.body.length > 0) {
+        return await normalizeImage(res.body);
       }
     } catch {
       // try the next image
@@ -176,6 +179,8 @@ export async function startTryOn(
           "הפרופיל נוצר במצב הדגמה — יש להעלות תמונות מחדש דרך עדכון פרופיל"
         );
       }
+      // Cap the billed pixels: model input is priced by image size.
+      const baseImage = await normalizeImage(avatar.data);
 
       // One image per garment, in order. Every garment must have an image —
       // dressing "blind" produces made-up clothes.
@@ -220,7 +225,7 @@ export async function startTryOn(
       }
 
       const result = await ai.generateTryOn(
-        { data: avatar.data, mimeType: avatar.contentType },
+        baseImage,
         productImages,
         {
           garments,
@@ -243,9 +248,16 @@ export async function startTryOn(
 
       await repos.tryons.update(tryon.id, { status: "ready", resultKey });
     } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown";
+      // Hebrew messages are written for the user; anything else is internal
+      // and must not leak provider/connection details to the client.
+      const userSafe = /[\u0590-\u05FF]/.test(message);
+      const errorId = logError("tryon.job", err, { tryonId: tryon.id });
       await repos.tryons.update(tryon.id, {
         status: "failed",
-        error: err instanceof Error ? err.message : "unknown",
+        error: userSafe
+          ? message
+          : `ההדמיה נכשלה. קוד שגיאה: ${errorId}`,
       });
     }
   });

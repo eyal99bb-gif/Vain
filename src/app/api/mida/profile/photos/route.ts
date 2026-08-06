@@ -1,15 +1,12 @@
 import { ensureUid } from "@/lib/mida/uid";
 import { addPhotos } from "@/lib/mida/services/profile";
+import { MAX_UPLOAD_BYTES, normalizeImage } from "@/lib/mida/images";
+import { logError } from "@/lib/mida/log";
+
+// Photos are normalized with sharp, which is worth a longer budget.
+export const maxDuration = 60;
 
 const MAX_FILES = 3;
-const MAX_BYTES = 8 * 1024 * 1024;
-
-const ALLOWED: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-  "image/heic": ".heic",
-};
 
 export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
@@ -27,21 +24,16 @@ export async function POST(request: Request) {
 
   const photos = [];
   for (const file of files) {
-    const ext = ALLOWED[file.type];
-    if (!ext) {
-      return Response.json(
-        { error: "unsupported_type", type: file.type },
-        { status: 400 }
-      );
-    }
-    if (file.size > MAX_BYTES) {
+    if (file.size > MAX_UPLOAD_BYTES) {
       return Response.json({ error: "file_too_large" }, { status: 400 });
     }
-    photos.push({
-      data: Buffer.from(await file.arrayBuffer()),
-      mimeType: file.type,
-      ext,
-    });
+    try {
+      // Validated by magic bytes, EXIF stripped (body photos can carry GPS),
+      // and downscaled before anything is stored or sent to the model.
+      photos.push(await normalizeImage(Buffer.from(await file.arrayBuffer())));
+    } catch {
+      return Response.json({ error: "unsupported_image" }, { status: 400 });
+    }
   }
 
   const uid = await ensureUid();
@@ -49,14 +41,7 @@ export async function POST(request: Request) {
     const photoKeys = await addPhotos(uid, photos);
     return Response.json({ photoKeys });
   } catch (err) {
-    // Surface the real cause (e.g. read-only filesystem, missing storage
-    // credentials) so deploy misconfigurations are diagnosable from the UI.
-    return Response.json(
-      {
-        error: "upload_failed",
-        detail: err instanceof Error ? err.message.slice(0, 200) : "unknown",
-      },
-      { status: 500 }
-    );
+    const errorId = logError("profile.photos", err, { uid });
+    return Response.json({ error: "upload_failed", errorId }, { status: 500 });
   }
 }

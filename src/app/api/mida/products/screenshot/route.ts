@@ -1,17 +1,11 @@
 import { ensureUid } from "@/lib/mida/uid";
 import { createProductFromScreenshot } from "@/lib/mida/services/product";
+import { MAX_UPLOAD_BYTES, normalizeImage } from "@/lib/mida/images";
+import { getIngestQuota, quotaMessage } from "@/lib/mida/services/quota";
+import { logError } from "@/lib/mida/log";
 
 // Screenshot classification calls Gemini — allow time on serverless hosts.
 export const maxDuration = 60;
-
-const MAX_BYTES = 8 * 1024 * 1024;
-
-const ALLOWED: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-  "image/heic": ".heic",
-};
 
 export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
@@ -23,36 +17,35 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return Response.json({ error: "image_required" }, { status: 400 });
   }
-  const ext = ALLOWED[file.type];
-  if (!ext) {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return Response.json({ error: "file_too_large" }, { status: 400 });
+  }
+
+  const uid = await ensureUid();
+  const quota = await getIngestQuota(uid);
+  if (!quota.allowed) {
     return Response.json(
-      { error: "unsupported_type", type: file.type },
-      { status: 400 }
+      { error: "quota_exceeded", message: quotaMessage(quota), quota },
+      { status: 429 }
     );
   }
-  if (file.size > MAX_BYTES) {
-    return Response.json({ error: "file_too_large" }, { status: 400 });
+
+  let image;
+  try {
+    image = await normalizeImage(Buffer.from(await file.arrayBuffer()));
+  } catch {
+    return Response.json({ error: "unsupported_image" }, { status: 400 });
   }
 
   const rawUrl = form.get("url");
   const sourceUrl =
     typeof rawUrl === "string" && /^https?:\/\//.test(rawUrl) ? rawUrl : null;
 
-  const uid = await ensureUid();
   try {
-    const product = await createProductFromScreenshot(
-      uid,
-      { data: Buffer.from(await file.arrayBuffer()), mimeType: file.type, ext },
-      sourceUrl
-    );
+    const product = await createProductFromScreenshot(uid, image, sourceUrl);
     return Response.json({ product });
   } catch (err) {
-    return Response.json(
-      {
-        error: "upload_failed",
-        detail: err instanceof Error ? err.message.slice(0, 200) : "unknown",
-      },
-      { status: 500 }
-    );
+    const errorId = logError("products.screenshot", err, { uid });
+    return Response.json({ error: "upload_failed", errorId }, { status: 500 });
   }
 }

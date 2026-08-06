@@ -9,13 +9,12 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:quant": "tsx src/lib/quant/__tests__/test.ts",
-    "test:mida": "tsx src/lib/mida/sizing/__tests__/test.ts && tsx src/lib/mida/scraper/__tests__/test.ts",
+    "test:mida": "tsx src/lib/mida/sizing/__tests__/test.ts && tsx src/lib/mida/scraper/__tests__/test.ts && tsx src/lib/mida/__tests__/security.test.ts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",
     "@google/genai": "^2.15.0",
-    "@vercel/blob": "^2.6.1",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.2",
     "motion": "^12.38.0",
@@ -23,6 +22,7 @@
     "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
