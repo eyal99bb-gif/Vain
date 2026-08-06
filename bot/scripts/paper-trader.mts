@@ -7,13 +7,19 @@
 //   • kelly-capped sizing, 5% rebalance band — unchanged
 // Outputs: actions.json (orders → journal comments) + status.json (heartbeat).
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { analyze, type Analysis } from "../src/lib/quant/analyze";
 import { ASSETS } from "../src/lib/quant/config";
 import { fetchSeries } from "../src/lib/quant/fetchClient";
 import { fetchStockServer, SERVER_STOCKS } from "../src/lib/quant/fetchServer";
 import { isPaperKey, makeAlpaca, type AlpacaClient } from "../src/lib/quant/alpaca";
 import { longOnlyTarget, rebalanceDelta } from "../src/lib/quant/testnet";
+import {
+  EMPTY_STATE,
+  mergeEquityCurve,
+  type BotState,
+  type StateSignal,
+} from "../src/lib/quant/botState";
 import type { PriceSeries } from "../src/lib/quant/types";
 
 const MIN_CONVICTION = 0.25; // lowered from 0.35 per user request: more trades, more data
@@ -35,12 +41,22 @@ const status: string[] = [];
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 const usd = (x: number) => `$${x.toFixed(0)}`;
 
+// live portfolio snapshot published to the dashboard every run
+const botState: BotState = {
+  ...EMPTY_STATE,
+  positions: [],
+  signals: [],
+  trades: [],
+  equityCurve: [],
+};
+
 function writeOut(actions: Action[]) {
+  const now = new Date().toISOString();
   writeFileSync("actions.json", JSON.stringify(actions, null, 2));
-  writeFileSync(
-    "status.json",
-    JSON.stringify({ updatedAt: new Date().toISOString(), lines: status }, null, 2),
-  );
+  writeFileSync("status.json", JSON.stringify({ updatedAt: now, lines: status }, null, 2));
+  botState.updatedAt = now;
+  if (!botState.live && !botState.note) botState.note = status[0] ?? "";
+  writeFileSync("bot-state.json", JSON.stringify(botState));
   for (const l of status) console.log(l);
 }
 
@@ -176,6 +192,7 @@ async function main() {
     stop: number;
   }
   const stopPlans: StopPlan[] = [];
+  const stateSignals: StateSignal[] = [];
 
   for (const a of universe) {
     const an = analyses.get(a.id);
@@ -220,6 +237,18 @@ async function main() {
           : !strong
             ? `אות לונג אבל ${e.conviction < MIN_CONVICTION ? `הביטחון נמוך (${pct(e.conviction)})` : "אין יתרון מדוד (קלי 0)"}`
             : `אות לונג, יעד ${pct(target)}${leaderNote}`;
+
+    const tradable = strong && target !== 0;
+    stateSignals.push({
+      id: a.id,
+      label: a.label,
+      kind: a.kind,
+      direction: e.direction,
+      conviction: e.conviction,
+      price: p,
+      why,
+      tradable,
+    });
 
     if (delta === 0) {
       status.push(
@@ -317,6 +346,73 @@ async function main() {
       status.push(`▫️ ${sp.a.id}: לא הצלחתי להציב סטופ בבורסה (${String(err).slice(0, 80)})`);
     }
   }
+
+  // ── build the live portfolio snapshot for the dashboard ──
+  botState.live = true;
+  botState.equity = equity;
+  botState.cash = cash;
+  botState.startEquity = 100000; // Alpaca paper baseline
+  botState.signals = stateSignals;
+
+  const labelBySym = new Map(universe.map((a) => [posSymbol(a.id, a.kind), a.label]));
+  try {
+    const full = (await client.get("/v2/positions")) as Array<{
+      symbol: string;
+      qty: string;
+      market_value: string;
+      unrealized_pl: string;
+      unrealized_plpc: string;
+      side: string;
+    }>;
+    botState.positions = full.map((p) => ({
+      symbol: p.symbol,
+      label: labelBySym.get(p.symbol.replace("/", "")) ?? p.symbol,
+      qty: parseFloat(p.qty),
+      value: parseFloat(p.market_value),
+      pnl: parseFloat(p.unrealized_pl),
+      pnlPct: parseFloat(p.unrealized_plpc),
+      side: p.side === "short" ? "short" : "long",
+    }));
+  } catch {
+    /* positions unavailable this cycle */
+  }
+
+  try {
+    const closed = (await client.get(
+      "/v2/orders?status=closed&limit=30&direction=desc",
+    )) as Array<{
+      symbol: string;
+      side: string;
+      filled_qty: string;
+      filled_avg_price: string;
+      filled_at: string | null;
+    }>;
+    botState.trades = closed
+      .filter((o) => o.filled_at && parseFloat(o.filled_qty) > 0)
+      .slice(0, 15)
+      .map((o) => {
+        const qty = parseFloat(o.filled_qty);
+        const price = parseFloat(o.filled_avg_price);
+        return {
+          at: Date.parse(o.filled_at!),
+          symbol: o.symbol,
+          side: o.side === "sell" ? "sell" : "buy",
+          qty,
+          price,
+          value: qty * price,
+        };
+      });
+  } catch {
+    /* order history unavailable this cycle */
+  }
+
+  let prevCurve: BotState["equityCurve"] = [];
+  try {
+    prevCurve = JSON.parse(readFileSync("prev-state.json", "utf8")).equityCurve ?? [];
+  } catch {
+    /* first run — no previous state */
+  }
+  botState.equityCurve = mergeEquityCurve(prevCurve, equity);
 
   writeOut(actions);
 }

@@ -45,3 +45,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./bot/out
+          # keep bot-state.json (published by the trader) across site deploys
+          keep_files: true

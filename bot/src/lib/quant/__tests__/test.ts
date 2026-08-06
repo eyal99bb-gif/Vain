@@ -19,6 +19,7 @@ import { EXIT, exitState } from "../exits";
 import { compareExitStyles } from "../tradeBacktest";
 import { hmacSign, longOnlyTarget, rebalanceDelta, roundStep, TESTNET_BASE } from "../testnet";
 import { ALPACA_PAPER_BASE, isPaperKey } from "../alpaca";
+import { mergeEquityCurve } from "../botState";
 import { resample } from "../resample";
 import { walkForward } from "../backtest";
 
@@ -226,6 +227,23 @@ const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
     "Alpaca endpoint is hard-coded to the PAPER environment");
   assert(isPaperKey("PKABC123") && !isPaperKey("AKABC123"),
     "live Alpaca keys (AK...) are rejected, only paper keys (PK...) pass");
+}
+
+// ── 12. Equity-curve merge (one point per UTC day) ─────────────────────────
+{
+  const d0 = Date.UTC(2026, 0, 1, 10);
+  const d0b = Date.UTC(2026, 0, 1, 22);
+  const d1 = Date.UTC(2026, 0, 2, 9);
+  let c = mergeEquityCurve([], 100000, d0);
+  assert(c.length === 1 && c[0].v === 100000, "first equity point appended");
+  c = mergeEquityCurve(c, 100500, d0b);
+  assert(c.length === 1 && c[0].v === 100500, "same UTC day replaces, not appends");
+  c = mergeEquityCurve(c, 101000, d1);
+  assert(c.length === 2 && c[1].v === 101000, "new day appends a fresh point");
+  let big = [] as { t: number; v: number }[];
+  for (let i = 0; i < 500; i++) big = mergeEquityCurve(big, i, Date.UTC(2025, 0, 1) + i * 86400000);
+  assert(big.length === 400 && big[399].v === 499, "curve is capped to the last 400 days");
+  assert(mergeEquityCurve(undefined as never, 5, d0).length === 1, "missing prev curve is tolerated");
 }
 
 console.log(`\nAll ${passed} checks passed.`);

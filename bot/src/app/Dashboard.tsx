@@ -8,6 +8,7 @@ import { compareExitStyles, type TradeStyleReport } from "@/lib/quant/tradeBackt
 import { ASSETS } from "@/lib/quant/config";
 import { STATE_NAMES_HE } from "@/lib/quant/markov";
 import { fetchSeries } from "@/lib/quant/fetchClient";
+import LivePortfolio from "./LivePortfolio";
 import type { BacktestReport, Interval, PriceSeries } from "@/lib/quant/types";
 
 // palette — validated for dark surface with the dataviz checker:
@@ -145,6 +146,11 @@ export default function TradingDashboard() {
           יועץ המסחר
         </h1>
       </header>
+
+      {/* flagship: the bot's live paper portfolio */}
+      <div className="mb-6">
+        <LivePortfolio />
+      </div>
 
       {/* honest-by-design disclaimer — always visible */}
       <div
