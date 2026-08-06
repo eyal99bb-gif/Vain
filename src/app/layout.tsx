@@ -15,8 +15,12 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  title: "Studio Vain — עיצוב דיגיטלי פרימיום",
-  description: "סוכנות עיצוב דיגיטלי פרימיום. יוצרים חוויות ויזואליות שעוצרות גלילה, מעוררות רגש, ומניעות לפעולה.",
+  title: {
+    default: "MIDA — מדידה וירטואלית",
+    template: "%s — MIDA",
+  },
+  description:
+    "תמדוד לפני שאתה קונה. MIDA מלבישה עליך כל בגד מכל חנות אונליין וממליצה על המידה המדויקת שלך.",
 };
 
 export default function RootLayout({

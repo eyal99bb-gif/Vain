@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# MIDA demo-mode data (JSON store + local uploads)
+/.data/
 
 # vercel
 .vercel
