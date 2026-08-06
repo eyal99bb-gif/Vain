@@ -32,14 +32,21 @@ JSON-file persistence (`.data/mida-db.json`), local-disk uploads
 
 Copy `.env.example` to `.env.local` and fill in any subset:
 
+### Production checklist
+
+| Var | Why |
+|---|---|
+| `MIDA_SECRET` | Signs the identity cookie. Derived from the database URL if unset — set it explicitly to keep sessions across a database change. |
+| `MIDA_DAILY_TRYON_LIMIT` | Paid image generations per user per day (default 10). |
+| `MIDA_DAILY_INGEST_LIMIT` | Product ingests per user per day (default 40). |
+
 | Vars | Enables |
 |---|---|
 | `GEMINI_API_KEY` | Real avatar + try-on generation, LLM product extraction |
 | `DATABASE_URL` (or `POSTGRES_URL`) | Postgres persistence via Drizzle — tables auto-created on first use |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob object storage (optional) |
 | `S3_ENDPOINT` + `S3_ACCESS_KEY_ID` + `S3_SECRET_ACCESS_KEY` + `S3_BUCKET` | S3/R2 object storage (optional `S3_PUBLIC_URL` for CDN) |
 
-Image storage picks the first available: Blob → S3 → **Postgres** (`mida_files`
+Image storage picks the first available: S3 → **Postgres** (`mida_files`
 table) → local disk. So when a database is configured, images are stored in
 Postgres and no separate object store is needed.
 
@@ -74,6 +81,19 @@ src/app/api/mida/     profile, photos, avatar, products, tryons
 Try-ons run async: `POST /api/mida/tryons` returns `202` immediately with
 the size recommendation (pure function), the image generates post-response
 via `after()`, and the client polls `GET /api/mida/tryons/[id]`.
+
+### Safety and privacy
+
+- The anonymous session cookie is HMAC-signed, and `/api/files` serves an
+  object only to the uid that owns its key namespace.
+- Every outbound fetch (product pages, size guides, product images) resolves
+  DNS and refuses private, loopback and link-local addresses, re-checking
+  each redirect hop.
+- Uploads are validated by magic bytes, stripped of EXIF and downscaled
+  before storage or generation.
+- Daily per-user quotas cap Gemini spend; a refusal is never retried.
+- Profiles and all their images can be deleted from `/privacy` or the
+  profile list.
 
 ### Scripts
 
