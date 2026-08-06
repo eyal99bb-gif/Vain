@@ -16,6 +16,7 @@ import {
   CONFIDENCE_LABELS_HE,
   WARNINGS_HE,
 } from "./explain.he";
+import { calibrationNote } from "./calibrate";
 
 /** Girth measures shifted by fit preference (not lengths). */
 const GIRTH_KEYS: ReadonlySet<MeasureKey> = new Set(["chest", "waist", "hips"]);
@@ -38,6 +39,7 @@ export function recommendSize(input: RecommendInput): SizeRecommendation | null 
   const { sizeChart, garmentType, fitPreference } = input;
   if (!sizeChart || sizeChart.rows.length === 0) return null;
 
+  const calibrationCm = input.calibrationCm ?? 0;
   const resolved = resolveMeasures(input.measurements);
   const weights = weightsFor(garmentType);
   const tolMult = GARMENT_TOLERANCE_MULT[garmentType];
@@ -58,7 +60,10 @@ export function recommendSize(input: RecommendInput): SizeRecommendation | null 
       if (!range || userValue === undefined) continue;
 
       let target = userValue;
-      if (GIRTH_KEYS.has(key)) target += FIT_SHIFT_CM[fitPreference];
+      if (GIRTH_KEYS.has(key)) {
+        // Fit preference plus what past feedback taught us about this user.
+        target += FIT_SHIFT_CM[fitPreference] + calibrationCm;
+      }
 
       const mid = (range.min + range.max) / 2;
       const halfWidth = Math.max(
@@ -131,12 +136,17 @@ export function recommendSize(input: RecommendInput): SizeRecommendation | null 
     confidence,
     confidenceLabel: confidenceLabel,
     perMeasure: best.perMeasure,
-    explanation: buildExplanation({
-      size: best.label,
-      runnerUp: runnerUp?.label ?? null,
-      perMeasure: best.perMeasure,
-      fitPreference,
-    }),
+    explanation: [
+      buildExplanation({
+        size: best.label,
+        runnerUp: runnerUp?.label ?? null,
+        perMeasure: best.perMeasure,
+        fitPreference,
+      }),
+      calibrationNote(calibrationCm),
+    ]
+      .filter(Boolean)
+      .join(" "),
     warnings,
   };
 }

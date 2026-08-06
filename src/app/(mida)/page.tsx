@@ -41,25 +41,33 @@ export default async function HomePage() {
 
       {recentLooks.length > 0 ? (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-mida-ink">
-            המדידות האחרונות של {profile!.name}
-          </h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-mida-ink">
+              המדידות האחרונות של {profile!.name}
+            </h2>
+            <Link
+              href="/closet"
+              className="text-xs font-medium text-mida-accent-deep underline-offset-4 hover:underline"
+            >
+              לארון המלא
+            </Link>
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {recentLooks.map((look) => (
-              <a
+              <Link
                 key={look.id}
-                href={look.url}
-                target="_blank"
-                rel="noopener"
-                className="h-32 w-24 shrink-0 overflow-hidden rounded-xl border border-mida-line bg-mida-surface"
+                href="/closet"
+                className="h-32 w-24 shrink-0 overflow-hidden rounded-xl border border-mida-line bg-mida-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mida-accent"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={look.url}
                   alt="מדידה שמורה"
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover"
                 />
-              </a>
+              </Link>
             ))}
           </div>
         </section>
@@ -93,12 +101,20 @@ export default async function HomePage() {
         >
           {ctaLabel}
         </Link>
-        <Link
-          href="/profiles"
-          className="text-center text-sm text-mida-muted underline-offset-4 hover:underline"
-        >
-          {profile ? "החלפת פרופיל ועריכה" : "ניהול פרופילים"}
-        </Link>
+        <div className="flex items-center justify-center gap-4 text-sm text-mida-muted">
+          <Link
+            href="/profiles"
+            className="underline-offset-4 hover:underline"
+          >
+            {profile ? "החלפת פרופיל" : "ניהול פרופילים"}
+          </Link>
+          <Link href="/closet" className="underline-offset-4 hover:underline">
+            הארון שלי
+          </Link>
+          <Link href="/privacy" className="underline-offset-4 hover:underline">
+            פרטיות
+          </Link>
+        </div>
       </section>
     </div>
   );

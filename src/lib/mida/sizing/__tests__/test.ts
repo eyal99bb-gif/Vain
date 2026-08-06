@@ -2,6 +2,7 @@
 import assert from "node:assert";
 import { recommendSize } from "../recommend";
 import { resolveMeasures } from "../estimate";
+import { calibrationShiftCm } from "../calibrate";
 import type { NormalizedSizeChart, Measurements } from "../../types";
 
 let passed = 0;
@@ -128,6 +129,60 @@ test("estimates are anthropometrically plausible for 178cm/72kg", () => {
   assert.ok(v.waist! > 65 && v.waist! < 95, `waist ${v.waist}`);
   assert.ok(v.hips! > 80 && v.hips! < 110, `hips ${v.hips}`);
   assert.ok(v.inseam! > 70 && v.inseam! < 90, `inseam ${v.inseam}`);
+});
+
+test("calibration shifts the target after 'ran small' reports", () => {
+  const none = calibrationShiftCm([], "top");
+  const small = calibrationShiftCm(
+    [
+      { garmentType: "top", verdict: "small" },
+      { garmentType: "top", verdict: "small" },
+    ],
+    "top"
+  );
+  const large = calibrationShiftCm(
+    [{ garmentType: "top", verdict: "large" }],
+    "top"
+  );
+  assert.strictEqual(none, 0);
+  assert.ok(small > 0, "repeated 'small' should aim bigger");
+  assert.ok(large < 0, "'large' should aim smaller");
+  // Same-category feedback counts double.
+  assert.ok(
+    calibrationShiftCm([{ garmentType: "top", verdict: "small" }], "top") >
+      calibrationShiftCm([{ garmentType: "pants", verdict: "small" }], "top")
+  );
+  // And it is clamped so a run of reports cannot run away.
+  const many = calibrationShiftCm(
+    Array.from({ length: 20 }, () => ({ garmentType: "top", verdict: "small" as const })),
+    "top"
+  );
+  assert.ok(many <= 4, `clamped, got ${many}`);
+});
+
+test("'fit' reports leave the recommendation unchanged", () => {
+  const shift = calibrationShiftCm(
+    [
+      { garmentType: "top", verdict: "fit" },
+      { garmentType: "pants", verdict: "fit" },
+    ],
+    "top"
+  );
+  assert.strictEqual(shift, 0);
+});
+
+test("calibration changes the recommended size for a borderline body", () => {
+  const between: Measurements = { heightCm: 178, weightKg: 78, chestCm: 99, waistCm: 82, hipsCm: 99, shouldersCm: 45.5 };
+  const base = { measurements: between, fitPreference: "regular" as const, garmentType: "top" as const, sizeChart: chart };
+  const plain = recommendSize(base);
+  const sizedUp = recommendSize({ ...base, calibrationCm: 4 });
+  assert.ok(plain && sizedUp);
+  const order = ["S", "M", "L"];
+  assert.ok(
+    order.indexOf(sizedUp.size) >= order.indexOf(plain.size),
+    `calibrated ${sizedUp.size} should not be smaller than ${plain.size}`
+  );
+  assert.ok(sizedUp.explanation.includes("כיילנו"), "explains the calibration");
 });
 
 console.log(`\n${passed} sizing tests passed`);

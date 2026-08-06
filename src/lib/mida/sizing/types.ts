@@ -14,6 +14,8 @@ export interface RecommendInput {
   garmentType: GarmentType;
   sizeChart: NormalizedSizeChart;
   sizeChartSource?: SizeChartSource;
+  /** Girth offset in cm learned from this profile's fit feedback. */
+  calibrationCm?: number;
 }
 
 /** User girth values in cm, keyed by chart measure, with estimation flags. */

@@ -8,6 +8,7 @@ import { BROWSER_HEADERS, safeFetch } from "../net";
 import { logError, logWarn } from "../log";
 import { runJob } from "../jobs";
 import { recommendSize } from "../sizing/recommend";
+import { calibrationShiftCm } from "../sizing/calibrate";
 import type { Product, Profile, TryOn } from "../types";
 
 const MIME_TO_EXT: Record<string, string> = {
@@ -150,6 +151,11 @@ export async function startTryOn(
 
   // Size recommendation applies to the first product that has a size chart.
   const sizedProduct = products.find((p) => p.sizeChart) ?? null;
+  // Past "it ran small/large" reports shift the target for this profile.
+  const history = await repos.feedback.listByProfile(profile.id);
+  const calibrationCm = sizedProduct
+    ? calibrationShiftCm(history, sizedProduct.garmentType)
+    : 0;
   const sizeRec =
     sizedProduct?.sizeChart && profile.heightCm && profile.weightKg
       ? recommendSize({
@@ -166,6 +172,7 @@ export async function startTryOn(
           garmentType: sizedProduct.garmentType,
           sizeChart: sizedProduct.sizeChart,
           sizeChartSource: sizedProduct.sizeChartSource,
+          calibrationCm,
         })
       : null;
 

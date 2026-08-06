@@ -7,6 +7,8 @@ import SizeRecCard from "./SizeRecCard";
 import { compressImage } from "./imageUtils";
 import { Banner, Button, Card, LiveStatus, Spinner } from "./ui";
 import { usePolling } from "./usePolling";
+import ShareButton from "./ShareButton";
+import FitFeedback from "./FitFeedback";
 
 type Phase =
   | { name: "idle" }
@@ -15,6 +17,7 @@ type Phase =
   | { name: "processing"; product: Product; tryonId: string }
   | {
       name: "ready";
+      tryonId: string;
       resultUrl: string | null;
       sizeRec: SizeRecommendation | null;
     }
@@ -208,7 +211,12 @@ export default function TryOnFlow() {
                     : [...prev, phase.product]
                 );
                 setLastTryOnId(phase.tryonId);
-                setPhase({ name: "ready", resultUrl, sizeRec });
+                setPhase({
+                  name: "ready",
+                  tryonId: phase.tryonId,
+                  resultUrl,
+                  sizeRec,
+                });
               }}
               onFailed={(message) =>
                 setPhase({ name: "failed", product: phase.product, message })
@@ -218,6 +226,7 @@ export default function TryOnFlow() {
 
           {phase.name === "ready" && (
             <ResultView
+              tryonId={phase.tryonId}
               wornItems={wornItems}
               resultUrl={phase.resultUrl}
               sizeRec={phase.sizeRec}
@@ -501,12 +510,14 @@ function ProcessingView({
 }
 
 function ResultView({
+  tryonId,
   wornItems,
   resultUrl,
   sizeRec,
   onAddItem,
   onReset,
 }: {
+  tryonId: string;
   wornItems: Product[];
   resultUrl: string | null;
   sizeRec: SizeRecommendation | null;
@@ -541,7 +552,10 @@ function ResultView({
       )}
 
       {sizeRec ? (
-        <SizeRecCard rec={sizeRec} />
+        <>
+          <SizeRecCard rec={sizeRec} />
+          <FitFeedback tryonId={tryonId} size={sizeRec.size} />
+        </>
       ) : (
         <Card>
           <p className="text-sm leading-relaxed text-mida-muted">
@@ -554,11 +568,7 @@ function ResultView({
         {canAddMore && (
           <Button onClick={onAddItem}>הוספת פריט נוסף ללוק</Button>
         )}
-        {resultUrl && (
-          <a href={resultUrl} download="mida-look.png" className={secondaryBtnCls}>
-            שמירת הלוק
-          </a>
-        )}
+        {resultUrl && <ShareButton resultUrl={resultUrl} label="שמירה ושיתוף" />}
         {buyable.map((p) => (
           <a
             key={p.id}
